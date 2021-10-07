@@ -1,7 +1,7 @@
 type id_or_imm = V of Id.t | C of int
 type t =
   | Ans of exp * Syntax.position
-  | Let of (Id.t * Type.t) * exp * t
+  | Let of (Id.t * Type.t) * exp * t * Syntax.position
 and exp =
   | Nop
   | Set of int
