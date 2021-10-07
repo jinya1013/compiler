@@ -8,7 +8,21 @@ exception Error of t * Type.t * Type.t
 let extenv = ref M.empty
 
 (* for pretty printing (and type normalization) *)
-let rec deref_typ = function (* 型変数を中身でおきかえる関数 (caml2html: typing_deref) *)
+let rec deref_typ = (* 型変数を中身でおきかえる関数 *)
+(* 
+    与えられた型tに対して, t中に現れる全ての型変数をその参照先(中身)で置き換える.
+    型変数の参照先がNoneのとき(型変数が未定義であるとき)は参照先をType.Intにする.
+
+    Args
+        t : Type.t
+            型
+
+    Returns
+        retval : Type.t
+            変換後の型
+
+*)
+    function
   | Type.Fun(t1s, t2) -> Type.Fun(List.map deref_typ t1s, deref_typ t2)
   | Type.Tuple(ts) -> Type.Tuple(List.map deref_typ ts)
   | Type.Array(t) -> Type.Array(deref_typ t)
@@ -21,8 +35,35 @@ let rec deref_typ = function (* 型変数を中身でおきかえる関数 (caml2html: typing_
       r := Some(t');
       t'
   | t -> t
-let rec deref_id_typ (x, t) = (x, deref_typ t)
-let rec deref_term = function
+let rec deref_id_typ (x, t) = 
+(* 
+    変数名xと型tの組を引数にとり, xとderef_typ tの組を返す.
+
+    Args
+        xt : Id.t * Type.t
+            変数名と型の組
+
+    Returns
+        retval : Id.t * Type.t
+            変換後の変数名と型の組
+
+*)
+    (x, deref_typ t)
+
+let rec deref_term = 
+(* 
+    式e中に現れる型に対して, 型変数をその参照先で置き換える変換を再帰的に行う.
+
+    Args
+        e : Syntax.t
+            式
+
+    Returns
+        retval : Syntax.t
+            変換後の式
+
+*)
+    function
   | Not(e) -> Not(deref_term e)
   | Neg(e) -> Neg(deref_term e)
   | Add(e1, e2) -> Add(deref_term e1, deref_term e2)
@@ -49,7 +90,21 @@ let rec deref_term = function
   | Put(e1, e2, e3) -> Put(deref_term e1, deref_term e2, deref_term e3)
   | e -> e
 
-let rec occur r1 = function (* occur check (caml2html: typing_occur) *)
+let rec occur r1 = (* occur check *)
+(* 
+    与えられた2つの型r1, r2に対して, 一方が他方に含まれているか否かをbool値で返す.
+
+    Args
+        r1 : Type.t
+            型
+        r2 : Type.t
+            型
+    Returns
+        retval : bool
+            r1がr2に含まれていたか否か.
+
+*)
+    function 
   | Type.Fun(t2s, t2) -> List.exists (occur r1) t2s || occur r1 t2
   | Type.Tuple(t2s) -> List.exists (occur r1) t2s
   | Type.Array(t2) -> occur r1 t2
@@ -58,7 +113,20 @@ let rec occur r1 = function (* occur check (caml2html: typing_occur) *)
   | Type.Var({ contents = Some(t2) }) -> occur r1 t2
   | _ -> false
 
-let rec unify t1 t2 = (* 型が合うように、型変数への代入をする (caml2html: typing_unify) *)
+let rec unify t1 t2 = (* 型が合うように、型変数への代入をする *)
+(* 
+    与えられた2つの型t1, t2が等しいかどうかをチェックしていき, 一方が未定義の型変数Type.Var(ref None)であったら他方と等しくなるように代入を行う.
+    ただし, このときに一方の型変数が他方に含まれていないことを確認する(occur check).
+
+    Args
+        t1 : Type.t
+            型
+        e : Type.t
+            型
+    Returns
+        retval : unit
+
+*)
   match t1, t2 with
   | Type.Unit, Type.Unit | Type.Bool, Type.Bool | Type.Int, Type.Int | Type.Float, Type.Float -> ()
   | Type.Fun(t1s, t1'), Type.Fun(t2s, t2') ->
@@ -72,7 +140,7 @@ let rec unify t1 t2 = (* 型が合うように、型変数への代入をする (caml2html: typing
   | Type.Var(r1), Type.Var(r2) when r1 == r2 -> ()
   | Type.Var({ contents = Some(t1') }), _ -> unify t1' t2
   | _, Type.Var({ contents = Some(t2') }) -> unify t1 t2'
-  | Type.Var({ contents = None } as r1), _ -> (* 一方が未定義の型変数の場合 (caml2html: typing_undef) *)
+  | Type.Var({ contents = None } as r1), _ -> (* 一方が未定義の型変数の場合 *)
       if occur r1 t2 then raise (Unify(t1, t2));
       r1 := Some(t2)
   | _, Type.Var({ contents = None } as r2) ->
@@ -80,7 +148,22 @@ let rec unify t1 t2 = (* 型が合うように、型変数への代入をする (caml2html: typing
       r2 := Some(t1)
   | _, _ -> raise (Unify(t1, t2))
 
-let rec g env e = (* 型推論ルーチン (caml2html: typing_g) *)
+let rec g env e = (* 型推論ルーチン *)
+(* 
+    型環境envの下で式eの型を推論した結果を返す.
+    また, 式中に出てくる変数の型があっているかどうかも調べる.
+    もし, 未定義の型変数があったら, 適切な型を代入する.
+
+    Args
+        env : (Id.t * Type.t) list
+            型環境
+        e : Syntax.t
+            型を推論したい対象の式
+    Returns
+        retval : Type.t
+            式の型の推論結果
+    
+*)
   try
     match e with
     | Unit -> Type.Unit
@@ -93,7 +176,7 @@ let rec g env e = (* 型推論ルーチン (caml2html: typing_g) *)
     | Neg(e) ->
         unify Type.Int (g env e);
         Type.Int
-    | Add(e1, e2) | Sub(e1, e2) -> (* 足し算（と引き算）の型推論 (caml2html: typing_add) *)
+    | Add(e1, e2) | Sub(e1, e2) -> (* 足し算（と引き算）の型推論 *)
         unify Type.Int (g env e1);
         unify Type.Int (g env e2);
         Type.Int
@@ -113,21 +196,21 @@ let rec g env e = (* 型推論ルーチン (caml2html: typing_g) *)
         let t3 = g env e3 in
         unify t2 t3;
         t2
-    | Let((x, t), e1, e2) -> (* letの型推論 (caml2html: typing_let) *)
+    | Let((x, t), e1, e2) -> (* letの型推論 *)
         unify t (g env e1);
         g (M.add x t env) e2
-    | Var(x) when M.mem x env -> M.find x env (* 変数の型推論 (caml2html: typing_var) *)
+    | Var(x) when M.mem x env -> M.find x env (* 変数の型推論 *)
     | Var(x) when M.mem x !extenv -> M.find x !extenv
-    | Var(x) -> (* 外部変数の型推論 (caml2html: typing_extvar) *)
+    | Var(x) -> (* 外部変数の型推論 *)
         Format.eprintf "free variable %s assumed as external@." x;
         let t = Type.gentyp () in
         extenv := M.add x t !extenv;
         t
-    | LetRec({ name = (x, t); args = yts; body = e1 }, e2) -> (* let recの型推論 (caml2html: typing_letrec) *)
+    | LetRec({ name = (x, t); args = yts; body = e1 }, e2) -> (* let recの型推論 *)
         let env = M.add x t env in
         unify t (Type.Fun(List.map snd yts, g (M.add_list yts env) e1));
         g env e2
-    | App(e, es) -> (* 関数適用の型推論 (caml2html: typing_app) *)
+    | App(e, es) -> (* 関数適用の型推論 *)
         let t = Type.gentyp () in
         unify (g env e) (Type.Fun(List.map (g env) es, t));
         t
