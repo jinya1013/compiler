@@ -1,6 +1,6 @@
 type position = int * int
 type t = (* MinCamlの構文を表現するデータ型 (caml2html: syntax_t) *)
-  | Unit
+  | Unit of position
   | Bool of bool * position
   | Int of int * position
   | Float of float * position

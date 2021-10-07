@@ -1,5 +1,5 @@
 type t =
-  | Unit
+  | Unit of Syntax.position
   | Int of int * Syntax.position
   | Float of float* Syntax.position
   | Neg of Id.t * Syntax.position
