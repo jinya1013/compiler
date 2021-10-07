@@ -27,27 +27,27 @@ type t = (* K正規化後の式 (caml2html: knormal_t) *)
 and fundef = { name : Id.t * Type.t; args : (Id.t * Type.t) list; body : t }
 
 let rec fv = function (* 式に出現する（自由な）変数 (caml2html: knormal_fv) *)
-  | Unit | Int(_) | Float(_) | ExtArray(_) -> S.empty
-  | Neg(x) | FNeg(x) -> S.singleton x
-  | Add(x, y) | Sub(x, y) | FAdd(x, y) | FSub(x, y) | FMul(x, y) | FDiv(x, y) | Get(x, y) -> S.of_list [x; y]
-  | IfEq(x, y, e1, e2) | IfLE(x, y, e1, e2) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
-  | Let((x, t), e1, e2) -> S.union (fv e1) (S.remove x (fv e2))
-  | Var(x) -> S.singleton x
-  | LetRec({ name = (x, t); args = yts; body = e1 }, e2) ->
+  | Unit | Int(_, p) | Float(_, p) | ExtArray(_), p -> S.empty
+  | Neg(x, p) | FNeg(x, p) -> S.singleton x
+  | Add(x, y, p) | Sub(x, y, p) | FAdd(x, y, p) | FSub(x, y, p) | FMul(x, y, p) | FDiv(x, y, p) | Get(x, y, p) -> S.of_list [x; y]
+  | IfEq(x, y, e1, e2, p) | IfLE(x, y, e1, e2, p) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
+  | Let((x, t), e1, e2, p) -> S.union (fv e1) (S.remove x (fv e2))
+  | Var(x, p) -> S.singleton x
+  | LetRec({ name = (x, t); args = yts; body = e1 }, e2, p) ->
       let zs = S.diff (fv e1) (S.of_list (List.map fst yts)) in
       S.diff (S.union zs (fv e2)) (S.singleton x)
-  | App(x, ys) -> S.of_list (x :: ys)
-  | Tuple(xs) | ExtFunApp(_, xs) -> S.of_list xs
-  | Put(x, y, z) -> S.of_list [x; y; z]
-  | LetTuple(xs, y, e) -> S.add y (S.diff (fv e) (S.of_list (List.map fst xs)))
+  | App(x, ys, p) -> S.of_list (x :: ys)
+  | Tuple(xs, p) | ExtFunApp(_, xs, p) -> S.of_list xs
+  | Put(x, y, z, p) -> S.of_list [x; y; z]
+  | LetTuple(xs, y, e, p) -> S.add y (S.diff (fv e) (S.of_list (List.map fst xs)))
 
 let insert_let (e, t) k = (* letを挿入する補助関数 (caml2html: knormal_insert) *)
   match e with
-  | Var(x) -> k x
+  | Var(x, p) -> k x
   | _ ->
       let x = Id.gentmp t in
       let e', t' = k x in
-      Let((x, t), e, e'), t'
+      Let((x, t), e, e', p), t'
 
 let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
   | Syntax.Unit -> Unit, Type.Unit
