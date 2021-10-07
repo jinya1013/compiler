@@ -1,6 +1,6 @@
 type closure = { entry : Id.l; actual_fv : Id.t list }
 type t =
-  | Unit * Syntax.position 
+  | Unit of Syntax.position 
   | Int of int * Syntax.position 
   | Float of float * Syntax.position
   | Neg of Id.t * Syntax.position
