@@ -5,12 +5,16 @@ open Type
 }
 
 (* 正規表現の略記 *)
-let space = [' ' '\t' '\n' '\r']
+let space = [' ' '\t' '\r']
+let line = ['\n']
 let digit = ['0'-'9']
 let lower = ['a'-'z']
 let upper = ['A'-'Z']
 
 rule token = parse
+| line
+    {   Lexing.new_line lexbuf;
+        token lexbuf}
 | space+
     { token lexbuf }
 | "(*"
@@ -84,11 +88,16 @@ rule token = parse
     { IDENT(Lexing.lexeme lexbuf) }
 | _
     { failwith
-        (Printf.sprintf "unknown token %s near characters %d-%d"
+        (Printf.sprintf "unknown token %s near characters %d-%d  in line %d-%d"
            (Lexing.lexeme lexbuf)
            (Lexing.lexeme_start lexbuf)
-           (Lexing.lexeme_end lexbuf)) }
+           (Lexing.lexeme_end lexbuf)
+           ((Lexing.lexeme_start_p lexbuf).pos_lnum)
+           ((Lexing.lexeme_end_p lexbuf).pos_lnum)) }
 and comment = parse
+| line
+    { Lexing.new_line lexbuf;
+        comment lexbuf }
 | "*)"
     { () }
 | "(*"
