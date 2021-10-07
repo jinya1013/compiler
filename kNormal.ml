@@ -2,28 +2,28 @@
 
 type t = (* K正規化後の式 (caml2html: knormal_t) *)
   | Unit
-  | Int of int
-  | Float of float
-  | Neg of Id.t
-  | Add of Id.t * Id.t
-  | Sub of Id.t * Id.t
-  | FNeg of Id.t
-  | FAdd of Id.t * Id.t
-  | FSub of Id.t * Id.t
-  | FMul of Id.t * Id.t
-  | FDiv of Id.t * Id.t
-  | IfEq of Id.t * Id.t * t * t (* 比較 + 分岐 (caml2html: knormal_branch) *)
-  | IfLE of Id.t * Id.t * t * t (* 比較 + 分岐 *)
-  | Let of (Id.t * Type.t) * t * t
-  | Var of Id.t
-  | LetRec of fundef * t
-  | App of Id.t * Id.t list
-  | Tuple of Id.t list
-  | LetTuple of (Id.t * Type.t) list * Id.t * t
-  | Get of Id.t * Id.t
-  | Put of Id.t * Id.t * Id.t
-  | ExtArray of Id.t
-  | ExtFunApp of Id.t * Id.t list
+  | Int of int * Syntax.position
+  | Float of float * Syntax.position
+  | Neg of Id.t * Syntax.position
+  | Add of Id.t * Id.t * Syntax.position
+  | Sub of Id.t * Id.t * Syntax.position
+  | FNeg of Id.t * Syntax.position
+  | FAdd of Id.t * Id.t * Syntax.position
+  | FSub of Id.t * Id.t * Syntax.position
+  | FMul of Id.t * Id.t * Syntax.position
+  | FDiv of Id.t * Id.t * Syntax.position
+  | IfEq of Id.t * Id.t * t * t * Syntax.position (* 比較 + 分岐 (caml2html: knormal_branch) *)
+  | IfLE of Id.t * Id.t * t * t * Syntax.position (* 比較 + 分岐 *)
+  | Let of (Id.t * Type.t) * t * t * Syntax.position
+  | Var of Id.t * Syntax.position
+  | LetRec of fundef * t * Syntax.position
+  | App of Id.t * Id.t list * Syntax.position
+  | Tuple of Id.t list * Syntax.position
+  | LetTuple of (Id.t * Type.t) list * Id.t * t * Syntax.position
+  | Get of Id.t * Id.t * Syntax.position
+  | Put of Id.t * Id.t * Id.t * Syntax.position
+  | ExtArray of Id.t * Syntax.position
+  | ExtFunApp of Id.t * Id.t list * Syntax.position
 and fundef = { name : Id.t * Type.t; args : (Id.t * Type.t) list; body : t }
 
 let rec fv = function (* 式に出現する（自由な）変数 (caml2html: knormal_fv) *)
@@ -51,59 +51,59 @@ let insert_let (e, t) k = (* letを挿入する補助関数 (caml2html: knormal_insert) *
 
 let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
   | Syntax.Unit -> Unit, Type.Unit
-  | Syntax.Bool(b) -> Int(if b then 1 else 0), Type.Int (* 論理値true, falseを整数1, 0に変換 (caml2html: knormal_bool) *)
-  | Syntax.Int(i) -> Int(i), Type.Int
-  | Syntax.Float(d) -> Float(d), Type.Float
-  | Syntax.Not(e) -> g env (Syntax.If(e, Syntax.Bool(false), Syntax.Bool(true)))
-  | Syntax.Neg(e) ->
+  | Syntax.Bool(b, p) -> Int(if b then 1 else 0), Type.Int (* 論理値true, falseを整数1, 0に変換 (caml2html: knormal_bool) *)
+  | Syntax.Int(i, p) -> Int(i), Type.Int
+  | Syntax.Float(d, p) -> Float(d), Type.Float
+  | Syntax.Not(e, p) -> g env (Syntax.If(e, Syntax.Bool(false, p), Syntax.Bool(true, p), p))
+  | Syntax.Neg(e, p) ->
       insert_let (g env e)
         (fun x -> Neg(x), Type.Int)
-  | Syntax.Add(e1, e2) -> (* 足し算のK正規化 (caml2html: knormal_add) *)
+  | Syntax.Add(e1, e2, p) -> (* 足し算のK正規化 (caml2html: knormal_add) *)
       insert_let (g env e1)
         (fun x -> insert_let (g env e2)
             (fun y -> Add(x, y), Type.Int))
-  | Syntax.Sub(e1, e2) ->
+  | Syntax.Sub(e1, e2, p) ->
       insert_let (g env e1)
         (fun x -> insert_let (g env e2)
             (fun y -> Sub(x, y), Type.Int))
-  | Syntax.FNeg(e) ->
+  | Syntax.FNeg(e, p) ->
       insert_let (g env e)
         (fun x -> FNeg(x), Type.Float)
-  | Syntax.FAdd(e1, e2) ->
+  | Syntax.FAdd(e1, e2, p) ->
       insert_let (g env e1)
         (fun x -> insert_let (g env e2)
             (fun y -> FAdd(x, y), Type.Float))
-  | Syntax.FSub(e1, e2) ->
+  | Syntax.FSub(e1, e2, p) ->
       insert_let (g env e1)
         (fun x -> insert_let (g env e2)
             (fun y -> FSub(x, y), Type.Float))
-  | Syntax.FMul(e1, e2) ->
+  | Syntax.FMul(e1, e2, p) ->
       insert_let (g env e1)
         (fun x -> insert_let (g env e2)
             (fun y -> FMul(x, y), Type.Float))
-  | Syntax.FDiv(e1, e2) ->
+  | Syntax.FDiv(e1, e2, p) ->
       insert_let (g env e1)
         (fun x -> insert_let (g env e2)
             (fun y -> FDiv(x, y), Type.Float))
-  | Syntax.Eq _ | Syntax.LE _ as cmp ->
-      g env (Syntax.If(cmp, Syntax.Bool(true), Syntax.Bool(false)))
-  | Syntax.If(Syntax.Not(e1), e2, e3) -> g env (Syntax.If(e1, e3, e2)) (* notによる分岐を変換 (caml2html: knormal_not) *)
-  | Syntax.If(Syntax.Eq(e1, e2), e3, e4) ->
+  | Syntax.Eq (_, _, p) | Syntax.LE (_, _, p) as cmp ->
+      g env (Syntax.If(cmp, Syntax.Bool(true, p), Syntax.Bool(false, p), p))
+  | Syntax.If(Syntax.Not(e1, _), e2, e3, p2) -> g env (Syntax.If(e1, e3, e2, p2)) (* notによる分岐を変換 (caml2html: knormal_not) *)
+  | Syntax.If(Syntax.Eq(e1, e2, _), e3, e4, p) ->
       insert_let (g env e1)
         (fun x -> insert_let (g env e2)
             (fun y ->
               let e3', t3 = g env e3 in
               let e4', t4 = g env e4 in
               IfEq(x, y, e3', e4'), t3))
-  | Syntax.If(Syntax.LE(e1, e2), e3, e4) ->
+  | Syntax.If(Syntax.LE(e1, e2, _), e3, e4, p) ->
       insert_let (g env e1)
         (fun x -> insert_let (g env e2)
             (fun y ->
               let e3', t3 = g env e3 in
               let e4', t4 = g env e4 in
               IfLE(x, y, e3', e4'), t3))
-  | Syntax.If(e1, e2, e3) -> g env (Syntax.If(Syntax.Eq(e1, Syntax.Bool(false)), e3, e2)) (* 比較のない分岐を変換 (caml2html: knormal_if) *)
-  | Syntax.Let((x, t), e1, e2) ->
+  | Syntax.If(e1, e2, e3, p) -> g env (Syntax.If(Syntax.Eq(e1, Syntax.Bool(false, p), p), e3, e2, p)) (* 比較のない分岐を変換 (caml2html: knormal_if) *)
+  | Syntax.Let((x, t), e1, e2, p) ->
       let e1', t1 = g env e1 in
       let e2', t2 = g (M.add x t env) e2 in
       Let((x, t), e1', e2'), t2
