@@ -23,3 +23,13 @@ let rec id_of_typ = function
 let gentmp typ =
   incr counter;
   Printf.sprintf "T%s%d" (id_of_typ typ) !counter
+
+let output_id outchan i = output_string outchan i
+
+let output_id_list outchan is = 
+  let f i = 
+    output_string outchan ", ";
+    output_id outchan i in
+  output_id outchan (List.hd is);
+  List.iter f is
+

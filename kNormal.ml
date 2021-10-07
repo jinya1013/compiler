@@ -42,6 +42,22 @@ let rec fv = function (* 式に出現する（自由な）変数 (caml2html: knormal_fv) *)
   | LetTuple(xs, y, e) -> S.add y (S.diff (fv e) (S.of_list (List.map fst xs)))
 
 let insert_let (e, t) k = (* letを挿入する補助関数 (caml2html: knormal_insert) *)
+(* 
+    式eを受け取り, 新しい変数xを作って, let x = e in ...という式を返す. ただしeが最初から変数のときは, それをxとして利用し, letは挿入しない.
+    inの中を作るための関数kも引数として受け取り, kをxに適用した結果を...の部分として利用する.
+
+    Args
+        (e, t) : kNormal.t * Type.t
+          変換したい式とその型の組
+        k : Id.t -> kNormal.t * Type.t
+          変換の内容を記述する関数
+
+    Returns
+        retval : kNormal.t * Type.t
+          K正規化変換後の式とその型の組
+
+*)
+
   match e with
   | Var(x) -> k x
   | _ ->
@@ -50,6 +66,20 @@ let insert_let (e, t) k = (* letを挿入する補助関数 (caml2html: knormal_insert) *
       Let((x, t), e, e'), t'
 
 let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
+(* 
+    与えられた式sを型環境envの下で, K正規化を行なってK正規化後のデータ型に変換する.
+
+    Args
+        env : 
+          型環境
+        s : Syntax.t
+          式
+
+    Returns
+        retval : kNormal.t * Type.t
+          K正規化変換後の式とその型の組
+
+*)
   | Syntax.Unit -> Unit, Type.Unit
   | Syntax.Bool(b) -> Int(if b then 1 else 0), Type.Int (* 論理値true, falseを整数1, 0に変換 (caml2html: knormal_bool) *)
   | Syntax.Int(i) -> Int(i), Type.Int
@@ -177,3 +207,172 @@ let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
                 (fun z -> Put(x, y, z), Type.Unit)))
 
 let f e = fst (g M.empty e)
+
+
+let rec output_knormal outchan k = 
+  match k with
+  | Unit -> ()
+  | Int (i) -> output_string outchan (string_of_int i)
+  | Float (f) -> output_string outchan (string_of_float f)
+  | Neg (t) -> 
+  (
+    output_string outchan "Neg( ";
+    Id.output_id outchan t;
+    output_string outchan " )"
+  )
+  | Add (t1, t2) ->
+  (
+    output_string outchan "Add( ";
+    Id.output_id outchan t1;
+    output_string outchan ", ";
+    Id.output_id outchan t2;
+    output_string outchan " )"
+  )
+  | Sub (t1, t2) ->
+  (
+    output_string outchan "Sub( ";
+    Id.output_id outchan t1;
+    output_string outchan ", ";
+    Id.output_id outchan t2;
+    output_string outchan " )"
+  )
+  | FNeg (t) -> 
+  (
+    output_string outchan "FNeg( ";
+    Id.output_id outchan t;
+    output_string outchan " )"
+  )
+  | FAdd (t1, t2) ->
+  (
+    output_string outchan "FAdd( ";
+    Id.output_id outchan t1;
+    output_string outchan ", ";
+    Id.output_id outchan t2;
+    output_string outchan " )"
+  )
+  | FSub (t1, t2) ->
+  (
+    output_string outchan "FSub( ";
+    Id.output_id outchan t1;
+    output_string outchan ", ";
+    Id.output_id outchan t2;
+    output_string outchan " )"
+  )
+  | FMul (t1, t2) ->
+  (
+    output_string outchan "FMul( ";
+    Id.output_id outchan t1;
+    output_string outchan ", ";
+    Id.output_id outchan t2;
+    output_string outchan " )"
+  )
+  | FDiv (t1, t2) ->
+  (
+    output_string outchan "FDiv( ";
+    Id.output_id outchan t1;
+    output_string outchan ", ";
+    Id.output_id outchan t2;
+    output_string outchan " )"
+  )
+  | IfEq (t1, t2, t3, t4) -> (* 比較 + 分岐 (caml2html: knormal_branch) *)
+  (
+    output_string outchan "IfEq( ";
+    Id.output_id outchan t1;
+    output_string outchan ", ";
+    Id.output_id outchan t2;
+    output_string outchan ", ";
+    output_knormal outchan t3;
+    output_string outchan ", ";
+    output_knormal outchan t4;
+    output_string outchan " )"
+  )
+  | IfLE (t1, t2, t3, t4) -> (* 比較 + 分岐 (caml2html: knormal_branch) *)
+  (
+    output_string outchan "IfLE( ";
+    Id.output_id outchan t1;
+    output_string outchan ", ";
+    Id.output_id outchan t2;
+    output_string outchan ", ";
+    output_knormal outchan t3;
+    output_string outchan ", ";
+    output_knormal outchan t4;
+    output_string outchan " )"
+  )
+  | Let (t1, t2, t3) ->
+  (
+    output_string outchan "Let( ";
+    Id.output_id outchan (fst t1);
+    output_string outchan ", ";
+    output_knormal outchan t2;
+    output_string outchan ", ";
+    output_knormal outchan t3;
+    output_string outchan " )"
+  )
+  | Var (x) -> Id.output_id outchan x
+  | LetRec ({ name = f; args = a; body = b }, t) ->
+  (
+    output_string outchan "LetRec( { name = ";
+    Id.output_id outchan (fst f);
+    output_string outchan ", args = ( ";
+    Id.output_id_list outchan (fst (List.split a));
+    output_string outchan " ), body = ";
+    output_knormal outchan b;
+    output_string outchan " }, ";
+    output_knormal outchan t;
+    output_string outchan " )";
+  )
+  | App (t, ts) ->
+  (
+    output_string outchan "App( ";
+    Id.output_id outchan t;
+    Id.output_id_list outchan ts;
+    output_string outchan " )"
+
+  )
+  | Tuple (ts) ->
+  (
+    output_string outchan "( ";
+    Id.output_id_list outchan ts;
+    output_string outchan " )"
+  )
+  | LetTuple (t1s, t2, t3) ->
+  (
+    output_string outchan "Let( ( ";
+    Id.output_id_list outchan (fst (List.split t1s));
+    output_string outchan " ), ";
+    Id.output_id outchan t2;
+    output_string outchan ", ";
+    output_knormal outchan t3;
+    output_string outchan " )";
+  )
+  | Get (t1, t2) ->
+  (
+    output_string outchan "Get( ";
+    Id.output_id outchan t1;
+    output_string outchan ", ";
+    Id.output_id outchan t2;
+    output_string outchan " )"
+  )
+  | Put (t1, t2, t3) ->
+  (
+    output_string outchan "Put( ";
+    Id.output_id outchan t1;
+    output_string outchan ", ";
+    Id.output_id outchan t2;
+    output_string outchan ", ";
+    Id.output_id outchan t3;
+    output_string outchan " )"
+  )
+  | ExtArray (t) ->
+  (
+    output_string outchan "ExtArray( ";
+    Id.output_id outchan t;
+    output_string outchan " )"
+  )
+  | ExtFunApp (t, ts) ->
+  (
+    output_string outchan "ExtFunApp( ";
+    Id.output_id outchan t;
+    Id.output_id_list outchan ts;
+    output_string outchan " )"
+  )
