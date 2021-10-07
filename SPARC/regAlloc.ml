@@ -86,6 +86,7 @@ let add x r regenv =
 (* auxiliary functions for g' *)
 exception NoReg of Id.t * Type.t
 let find x t regenv =
+  (* 変数xに割り当てられているレジスタを探す. 存在しなければNoRegのエラーを投げる. *)
   if is_reg x then x else
   try M.find x regenv
   with Not_found -> raise (NoReg(x, t))
@@ -112,13 +113,16 @@ let rec g dest cont regenv = function (* 命令列のレジスタ割り当て (caml2html: re
           let (e2', regenv2) = g dest cont (add x r regenv1) e in
           (concat e1' (r, t) e2', regenv2))
 and g'_and_restore dest cont regenv exp = (* 使用される変数をスタックからレジスタへRestore (caml2html: regalloc_unspill) *)
+(* 命令expに対してレジスタ割り当てを行おうとする. 探している変数が見つからなかったら, スタックにある変数をレジスタに戻す *)
   try g' dest cont regenv exp
   with NoReg(x, t) ->
     ((* Format.eprintf "restoring %s@." x; *)
      g dest cont regenv (Let((x, t), Restore(x), Ans(exp))))
 and g' dest cont regenv = function (* 各命令のレジスタ割り当て (caml2html: regalloc_gprime) *)
   | Nop | Set _ | SetL _ | Comment _ | Restore _ as exp -> (Ans(exp), regenv)
+    (* レジスタ割り当ての必要なし, 命令も変化せず, レジスタの割り当て状況も変化しない *)
   | Mov(x) -> (Ans(Mov(find x Type.Int regenv)), regenv)
+    (*  *)
   | Neg(x) -> (Ans(Neg(find x Type.Int regenv)), regenv)
   | Add(x, y') -> (Ans(Add(find x Type.Int regenv, find' y' regenv)), regenv)
   | Sub(x, y') -> (Ans(Sub(find x Type.Int regenv, find' y' regenv)), regenv)

@@ -1,20 +1,24 @@
 {
-(* lexer¤¬ÍøÍÑ¤¹¤ëÊÑ¿ô¡¢´Ø¿ô¡¢·¿¤Ê¤É¤ÎÄêµÁ *)
+(* lexerï¿½ï¿½ï¿½ï¿½ï¿½Ñ¤ï¿½ï¿½ï¿½ï¿½Ñ¿ï¿½ï¿½ï¿½ï¿½Ø¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¤É¤ï¿½ï¿½ï¿½ï¿? *)
 open Parser
 open Type
 }
 
-(* Àµµ¬É½¸½¤ÎÎ¬µ­ *)
-let space = [' ' '\t' '\n' '\r']
+(* ï¿½ï¿½ï¿½ï¿½É½ï¿½ï¿½ï¿½ï¿½Î¬ï¿½ï¿½ *)
+let space = [' ' '\t' '\r']
+let line = ['\n']
 let digit = ['0'-'9']
 let lower = ['a'-'z']
 let upper = ['A'-'Z']
 
 rule token = parse
+| line
+    {   Lexing.new_line lexbuf;
+        token lexbuf}
 | space+
     { token lexbuf }
 | "(*"
-    { comment lexbuf; (* ¥Í¥¹¥È¤·¤¿¥³¥á¥ó¥È¤Î¤¿¤á¤Î¥È¥ê¥Ã¥¯ *)
+    { comment lexbuf; (* ï¿½Í¥ï¿½ï¿½È¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¤Î¤ï¿½ï¿½ï¿½Î¥È¥ï¿½Ã¥ï¿½ *)
       token lexbuf }
 | '('
     { LPAREN }
@@ -26,13 +30,13 @@ rule token = parse
     { BOOL(false) }
 | "not"
     { NOT }
-| digit+ (* À°¿ô¤ò»ú¶ç²òÀÏ¤¹¤ë¥ë¡¼¥ë (caml2html: lexer_int) *)
+| digit+ (* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¤ï¿½ï¿½ï¿½ë¡¼ï¿½ï¿? (caml2html: lexer_int) *)
     { INT(int_of_string (Lexing.lexeme lexbuf)) }
 | digit+ ('.' digit*)? (['e' 'E'] ['+' '-']? digit+)?
     { FLOAT(float_of_string (Lexing.lexeme lexbuf)) }
-| '-' (* -.¤è¤ê¸å²ó¤·¤Ë¤·¤Ê¤¯¤Æ¤âÎÉ¤¤? ºÇÄ¹°ìÃ×? *)
+| '-' (* -.ï¿½ï¿½ï¿½ï¿½ó¤·¤Ë¤ï¿½ï¿½Ê¤ï¿½ï¿½Æ¤ï¿½ï¿½É¤ï¿?? ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½ï¿½? *)
     { MINUS }
-| '+' (* +.¤è¤ê¸å²ó¤·¤Ë¤·¤Ê¤¯¤Æ¤âÎÉ¤¤? ºÇÄ¹°ìÃ×? *)
+| '+' (* +.ï¿½ï¿½ï¿½ï¿½ó¤·¤Ë¤ï¿½ï¿½Ê¤ï¿½ï¿½Æ¤ï¿½ï¿½É¤ï¿?? ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½ï¿½? *)
     { PLUS }
 | "-."
     { MINUS_DOT }
@@ -80,15 +84,20 @@ rule token = parse
     { SEMICOLON }
 | eof
     { EOF }
-| lower (digit|lower|upper|'_')* (* Â¾¤Î¡ÖÍ½Ìó¸ì¡×¤è¤ê¸å¤Ç¤Ê¤¤¤È¤¤¤±¤Ê¤¤ *)
+| lower (digit|lower|upper|'_')* (* Â¾ï¿½Î¡ï¿½Í½ï¿½ï¿½ï¿½×¤ï¿½ï¿½ï¿½Ç¤Ê¤ï¿½ï¿½È¤ï¿½ï¿½ï¿½ï¿½Ê¤ï¿? *)
     { IDENT(Lexing.lexeme lexbuf) }
 | _
     { failwith
-        (Printf.sprintf "unknown token %s near characters %d-%d"
+        (Printf.sprintf "unknown token %s near characters %d-%d  in line %d-%d"
            (Lexing.lexeme lexbuf)
            (Lexing.lexeme_start lexbuf)
-           (Lexing.lexeme_end lexbuf)) }
+           (Lexing.lexeme_end lexbuf)
+           ((Lexing.lexeme_start_p lexbuf).pos_lnum)
+           ((Lexing.lexeme_end_p lexbuf).pos_lnum)) }
 and comment = parse
+| line
+    { Lexing.new_line lexbuf;
+        comment lexbuf }
 | "*)"
     { () }
 | "(*"

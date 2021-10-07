@@ -2,8 +2,8 @@
 
 type id_or_imm = V of Id.t | C of int
 type t = (* 命令の列 (caml2html: sparcasm_t) *)
-  | Ans of exp
-  | Let of (Id.t * Type.t) * exp * t
+| Ans of exp * Syntax.pos
+| Let of (Id.t * Type.t) * exp * t * Syntax.pos
 and exp = (* 一つ一つの命令に対応する式 (caml2html: sparcasm_exp) *)
   | Nop
   | Set of int
