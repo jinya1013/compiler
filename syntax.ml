@@ -35,6 +35,8 @@ let rec output_syntax outchan s depth =
           出力先のチャンネル
         s : Syntax.t
           出力する式
+        depth : int
+          構文解析木の深さ
 
     Returns
         retval : unit
@@ -182,7 +184,6 @@ let rec output_syntax outchan s depth =
     output_string outchan "}";
     output_syntax outchan t (depth + 1); 
   )
-
   | App (t, ts) ->
   (
     Id.output_tab outchan depth;
