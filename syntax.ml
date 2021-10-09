@@ -32,18 +32,19 @@ let top_pos:pos = 0
 
 let rec output_syntax outchan s depth = 
 (* 
-    ä¸?????????????å¼?s????????£ã?????outchan?????ºå????????.
+    Í¿¤¨¤é¤ì¤¿¼°s¤ò¥Á¥ã¥Í¥ëoutchan¤Ë½ĞÎÏ¤¹¤ë.
+
     Args
         outchan : out_channel
-          ??ºå?????????????£ã?³ã?????
+          ½ĞÎÏÀè¤Î¥Á¥ã¥ó¥Í¥ë
         s : Syntax.t
-          ??ºå????????å¼?
+          ½ĞÎÏ¤¹¤ë¼°
         depth : int
-          æ§????è§£æ????????æ·±ã??
+          ¹½Ê¸²òÀÏÌÚ¤Î¿¼¤µ
 
     Returns
         retval : unit
-          ??????            
+          ¤Ê¤·            
 *)
   match s with
   | Unit(p)  -> ()
@@ -52,7 +53,7 @@ let rec output_syntax outchan s depth =
     if b then 
     (
       Id.output_tab outchan depth;
-      output_string outchan "B00L TRUE"
+      output_string outchan "BOOL TRUE"
     )
     else 
     (
@@ -60,18 +61,16 @@ let rec output_syntax outchan s depth =
       output_string outchan "BOOL FALSE"
     )
   )
-  | Int i -> 
+  | Int (i,p) -> 
   (
     Id.output_tab outchan depth;
     output_string outchan ("INT " ^ (string_of_int i))
   )
-  | Float f -> 
+  | Float (f,p) -> 
   (
     Id.output_tab outchan depth;
     output_string outchan ("FLOAT " ^ (string_of_float f))
   )
-  | Int(i,p) -> output_string outchan (string_of_int i)
-  | Float (f,p) -> output_string outchan (string_of_float f)
   | Not (t,p) ->
   (
     Id.output_tab outchan depth;
@@ -162,13 +161,12 @@ let rec output_syntax outchan s depth =
     output_syntax outchan t2 (depth + 1);
     output_syntax outchan t3 (depth + 1);
   )
-  | Var (x) -> 
+  | Var (x, p) -> 
   (
     Id.output_tab outchan depth;
     output_string outchan "VAR ";
     Id.output_id outchan x;
   )
-  | Var (x, p) -> Id.output_id outchan x
   | LetRec ({ name = f; args = a; body = b }, t, p) ->
   (
     Id.output_tab outchan depth;
