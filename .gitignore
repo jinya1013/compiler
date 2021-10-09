@@ -1,4 +1,4 @@
-*.stx
+# *.stx
 # mostly taken by https://github.com/github/gitignore
 
 *.annot
@@ -71,17 +71,17 @@ _opam/
 *.cmp
 *.ans
 
-asm.ml
-asm.mli
-emit.ml
-libmincaml.S
-regAlloc.ml
-simm.ml
-virtual.ml
+# asm.ml
+# asm.mli
+# emit.ml
+# libmincaml.S
+# regAlloc.ml
+# simm.ml
+# virtual.ml
 
-min-caml
-min-caml.top
+# min-caml
+# min-caml.top
 
-test/*
-!test/*.ml
-!test/*.c
+# test/*
+# !test/*.ml
+# !test/*.c

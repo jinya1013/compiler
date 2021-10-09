@@ -20,7 +20,6 @@ let rec deref_typ = (* 型変数を中身でおきかえる関数 *)
     Returns
         retval : Type.t
             変換後の型
-
 *)
     function
   | Type.Fun(t1s, t2) -> Type.Fun(List.map deref_typ t1s, deref_typ t2)

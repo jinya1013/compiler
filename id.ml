@@ -1,5 +1,5 @@
-type t = string (* å¤‰æ•°ã®åå‰ (caml2html: id_t) *)
-type l = L of string (* ãƒˆãƒƒãƒ—ãƒ¬ãƒ™ãƒ«é–¢æ•°ã‚„ã‚°ãƒ­ãƒ¼ãƒãƒ«é…åˆ—ã®ãƒ©ãƒ™ãƒ« (caml2html: id_l) *)
+type t = string (* å¤???°ã???????? (caml2html: id_t) *)
+type l = L of string (* ????????????????????¢æ?°ã????°ã?­ã?¼ã??????????????????????? (caml2html: id_l) *)
 
 let output_tab outchan depth = 
   let rec _output_tab iter = 
@@ -10,7 +10,27 @@ let output_tab outchan depth =
       output_string outchan "\t";
       _output_tab (iter-1)
     )
-    in output_string outchan "\n"; _output_tab depth
+    in 
+    output_string outchan "\n";
+    _output_tab depth
+
+let output_tab2 outchan depth p = 
+  let rec _output_tab iter = 
+    match iter with
+    | 0 -> ()
+    | _ -> 
+    (
+      output_string outchan "\t";
+      _output_tab (iter-1)
+    )
+    in 
+    output_string outchan "\n";
+    (
+      match p with
+      | 0 -> ()
+      | x -> output_string outchan (string_of_int x)
+    );
+    _output_tab depth
 
 let rec pp_list = function
   | [] -> ""
