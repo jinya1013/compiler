@@ -27,7 +27,7 @@ type t = (* MinCamlの構文を表現するデータ型 (caml2html: syntax_t) *)
   | Put of t * t * t * pos
 and fundef = { name : Id.t * Type.t; args : (Id.t * Type.t) list; body : t }
 
-
+let none_pos:pos = -1
 let top_pos:pos = 0
 
 let rec output_syntax outchan s depth = 

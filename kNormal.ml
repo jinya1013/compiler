@@ -226,26 +226,29 @@ let rec output_knormal outchan k depth =
           ¤Ê¤·            
 *)
   match k with
-  | Unit(p) -> ()
+  | Unit(p) -> 
+  (
+    Id.output_tab2 outchan (depth + 1) p
+  )
   | Int (i, p) -> 
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan ("INT " ^ (string_of_int i))
   )
   | Float (f, p) -> 
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan ("FLOAT " ^ (string_of_float f))
   )
   | Neg (t, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "NEG ";
     Id.output_id outchan t;
   )
   | Add (t1, t2, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "ADD ";
     Id.output_id outchan t1;
     output_string outchan " ";
@@ -253,7 +256,7 @@ let rec output_knormal outchan k depth =
   )
   | Sub (t1, t2, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "SUB ";
     Id.output_id outchan t1;
     output_string outchan " ";
@@ -261,13 +264,13 @@ let rec output_knormal outchan k depth =
   )
   | FNeg (t, p) -> 
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "FNEG ";
     Id.output_id outchan t;
   )
   | FAdd (t1, t2, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "FADD ";
     Id.output_id outchan t1;
     output_string outchan " ";
@@ -275,7 +278,7 @@ let rec output_knormal outchan k depth =
   )
   | FSub (t1, t2, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "FSUB ";
     Id.output_id outchan t1;
     output_string outchan " ";
@@ -283,7 +286,7 @@ let rec output_knormal outchan k depth =
   )
   | FMul (t1, t2, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "FMUL ";
     Id.output_id outchan t1;
     output_string outchan " ";
@@ -291,7 +294,7 @@ let rec output_knormal outchan k depth =
   )
   | FDiv (t1, t2, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "FDIV ";
     Id.output_id outchan t1;
     output_string outchan " ";
@@ -299,7 +302,7 @@ let rec output_knormal outchan k depth =
   )
   | IfEq (t1, t2, t3, t4, p) -> (* Èæ³Ó + Ê¬´ô (caml2html: knormal_branch) *)
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "IFEQ ";
     Id.output_id outchan t1;
     output_string outchan " ";
@@ -309,7 +312,7 @@ let rec output_knormal outchan k depth =
   )
   | IfLE (t1, t2, t3, t4, p) -> (* Èæ³Ó + Ê¬´ô (caml2html: knormal_branch) *)
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "IFLE ";
     Id.output_id outchan t1;
     output_string outchan " ";
@@ -319,7 +322,7 @@ let rec output_knormal outchan k depth =
   )
   | Let (t1, t2, t3, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "LET ";
     Id.output_id outchan (fst t1);
     output_knormal outchan t2 (depth + 1);
@@ -327,34 +330,34 @@ let rec output_knormal outchan k depth =
   )
   | Var (x, p) -> 
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "VAR ";
     Id.output_id outchan x;
   )
   | LetRec ({ name = f; args = a; body = b }, t, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "LETREC ";
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "{";
-    Id.output_tab outchan (depth + 1);
+    Id.output_tab2 outchan (depth + 1) p;
     output_string outchan "name = ";
     Id.output_id outchan (fst f);
-    Id.output_tab outchan (depth + 1);
+    Id.output_tab2 outchan (depth + 1) p;
     output_string outchan "args = ";
     output_string outchan "(";
     Id.output_id_list outchan (fst (List.split a));
     output_string outchan ")";
-    Id.output_tab outchan (depth + 1);
+    Id.output_tab2 outchan (depth + 1) p;
     output_string outchan "body = ";
     output_knormal outchan b (depth + 2);
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "}";
     output_knormal outchan t (depth + 1); 
   )
   | App (t, ts, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "APP ";
     Id.output_id outchan t;
     output_string outchan " ";
@@ -362,14 +365,14 @@ let rec output_knormal outchan k depth =
   )
   | Tuple (ts, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "(";
     Id.output_id_list outchan ts;
     output_string outchan ")"
   )
   | LetTuple (t1s, t2, t3, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "LET ";
     output_string outchan "(";
     Id.output_id_list outchan (fst (List.split t1s));
@@ -380,7 +383,7 @@ let rec output_knormal outchan k depth =
   )
   | Get (t1, t2, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "GET ";
     Id.output_id outchan t1;
     output_string outchan " ";
@@ -388,7 +391,7 @@ let rec output_knormal outchan k depth =
   )
   | Put (t1, t2, t3, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "PUT ";
     Id.output_id outchan t1;
     output_string outchan " ";
@@ -398,13 +401,13 @@ let rec output_knormal outchan k depth =
   )
   | ExtArray (t, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "EXTARRAY ";
     Id.output_id outchan t;
   )
   | ExtFunApp (t, ts, p) ->
   (
-    Id.output_tab outchan depth;
+    Id.output_tab2 outchan depth p;
     output_string outchan "EXTFUNAPP ";
     Id.output_id outchan t;
     output_string outchan " ";

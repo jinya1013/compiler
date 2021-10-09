@@ -28,7 +28,11 @@ let output_tab2 outchan depth p =
     (
       match p with
       | 0 -> ()
-      | x -> output_string outchan (string_of_int x)
+      | x -> 
+      (
+        output_string outchan (string_of_int x);
+        output_string outchan "\t"
+      )
     );
     _output_tab depth
 

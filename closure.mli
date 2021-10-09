@@ -1,28 +1,28 @@
 type closure = { entry : Id.l; actual_fv : Id.t list }
-type t =
-  | Unit
-  | Int of int
-  | Float of float
-  | Neg of Id.t
-  | Add of Id.t * Id.t
-  | Sub of Id.t * Id.t
-  | FNeg of Id.t
-  | FAdd of Id.t * Id.t
-  | FSub of Id.t * Id.t
-  | FMul of Id.t * Id.t
-  | FDiv of Id.t * Id.t
-  | IfEq of Id.t * Id.t * t * t
-  | IfLE of Id.t * Id.t * t * t
-  | Let of (Id.t * Type.t) * t * t
-  | Var of Id.t
-  | MakeCls of (Id.t * Type.t) * closure * t
-  | AppCls of Id.t * Id.t list
-  | AppDir of Id.l * Id.t list
-  | Tuple of Id.t list
-  | LetTuple of (Id.t * Type.t) list * Id.t * t
-  | Get of Id.t * Id.t
-  | Put of Id.t * Id.t * Id.t
-  | ExtArray of Id.l
+type t = (* クロージャ変換後の式 (caml2html: closure_t) *)
+  | Unit of Syntax.pos
+  | Int of int * Syntax.pos
+  | Float of float * Syntax.pos
+  | Neg of Id.t * Syntax.pos
+  | Add of Id.t * Id.t * Syntax.pos
+  | Sub of Id.t * Id.t * Syntax.pos
+  | FNeg of Id.t * Syntax.pos
+  | FAdd of Id.t * Id.t * Syntax.pos
+  | FSub of Id.t * Id.t * Syntax.pos
+  | FMul of Id.t * Id.t * Syntax.pos
+  | FDiv of Id.t * Id.t * Syntax.pos
+  | IfEq of Id.t * Id.t * t * t * Syntax.pos
+  | IfLE of Id.t * Id.t * t * t * Syntax.pos
+  | Let of (Id.t * Type.t) * t * t * Syntax.pos
+  | Var of Id.t * Syntax.pos
+  | MakeCls of (Id.t * Type.t) * closure * t * Syntax.pos  (*(関数名, 関数の型), クロージャ, 関数の本体 *)
+  | AppCls of Id.t * Id.t list * Syntax.pos
+  | AppDir of Id.l * Id.t list * Syntax.pos
+  | Tuple of Id.t list * Syntax.pos
+  | LetTuple of (Id.t * Type.t) list * Id.t * t * Syntax.pos
+  | Get of Id.t * Id.t * Syntax.pos
+  | Put of Id.t * Id.t * Id.t * Syntax.pos
+  | ExtArray of Id.l * Syntax.pos
 type fundef = { name : Id.l * Type.t;
                 args : (Id.t * Type.t) list;
                 formal_fv : (Id.t * Type.t) list;
@@ -36,3 +36,4 @@ val output_funclosure : out_channel -> closure -> unit
 val output_fundef : out_channel -> fundef -> int -> unit
 val output_fundef_list : out_channel -> fundef list -> int -> unit
 val output_prog : out_channel -> prog -> int -> unit
+val pos_of_t: t -> Syntax.pos
