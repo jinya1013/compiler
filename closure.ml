@@ -29,6 +29,17 @@ type fundef = { name : Id.l * Type.t;
                 body : t }
 type prog = Prog of fundef list * t
 
+(*
+    式sを受け取り，自由変数のMapSを返す
+
+    Args
+        s : Closure.t
+          式
+
+    Returns
+      retval: S.t
+        Id.tの集合
+*)
 let rec fv = function
   | Unit | Int(_) | Float(_) | ExtArray(_) -> S.empty
   | Neg(x) | FNeg(x) -> S.singleton x
@@ -44,6 +55,23 @@ let rec fv = function
 
 let toplevel : fundef list ref = ref []
 
+(*
+    与えられた式s中の関数定義について，トップレベルに持っていけないないものはクロージャーとして
+    処理を行う．この際，関数定義は変数として参照されうるため，すぐにクロージャーとしては判定できない
+    関数適用については，knownの中を探し，クロージャーの適用かそうでないかを区別する
+
+    Args
+        env : Id.t * Type.t list
+          変数名と型の環境
+        known : Id.t list
+          自由変数を使わない関数の集合
+        s : KNormal.t
+          式
+    
+    Returns
+        retval = Closure.t
+          クロージャー返還後の式
+*)
 let rec g env known = function (* クロージャ変換ルーチン本体 (caml2html: closure_g) *)
   | KNormal.Unit -> Unit
   | KNormal.Int(i) -> Int(i)
@@ -100,6 +128,9 @@ let rec g env known = function (* クロージャ変換ルーチン本体 (caml2html: closure
   | KNormal.ExtArray(x) -> ExtArray(Id.L(x))
   | KNormal.ExtFunApp(x, ys) -> AppDir(Id.L("min_caml_" ^ x), ys)
 
+(*
+  処理の主要部分．toplevelは関数定義の集合
+*)
 let f e =
   toplevel := [];
   let e' = g M.empty S.empty e in
