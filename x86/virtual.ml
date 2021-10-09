@@ -14,14 +14,16 @@ let classify xts ini addf addi =
   Args
     xts : (Id.t * Type.t) list
       fold_leftの対象のリスト
-    ini : Id.t * Type.t
+    ini : a'
       fold_leftの初期値
-    addf : 
-     
-    addi :
-
+    addf : a' -> Id.t -> a'
+      浮動小数用の演算
+    addi : a' -> Id.t -> Type.t -> a'
+      整数用の演算
 
   Returns
+    retval : a'
+      計算の結果
 
 *)
   List.fold_left
@@ -36,6 +38,20 @@ let classify xts ini addf addi =
     xts
 
 let separate xts =
+(*
+  (変数名, 型)のリストxtsに対して, fold_leftによって, 
+    add (... (add (add ini xt1) xt2) ...) xtn
+  を計算する.
+  この際, xtの型によって適用する関数がaddiかaddfか異なることに注意する.
+
+  Args
+    xts : (Id.t * Type.t) list
+      fold_leftの対象のリスト
+
+  Returns
+    retval : Id.t list * Id.t list
+      int型の変数名のリストとfloat型の変数名のリストの組
+*)
   classify
     xts
     ([], [])
@@ -53,6 +69,18 @@ let expand xts ini addf addi =
       (offset + 4, addi x t offset acc))
 
 let rec g env = function (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
+(*
+  変数名と型のマッピングenvとクロージャ変換後の式eを引数にとって一命令列を生成する.
+
+  Args
+    env : M.t
+      変数名を引数にとって, その型を返すマッピング
+    e : Closure.t
+      クロージャ変換後の式
+  Returns
+    retval : Asm.t
+      仮想マシンコードの命令列
+*)
   | Closure.Unit -> Ans(Nop)
   | Closure.Int(i) -> Ans(Set(i))
   | Closure.Float(d) ->
