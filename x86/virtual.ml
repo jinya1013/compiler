@@ -5,12 +5,33 @@ open Asm
 let data = ref [] (* 浮動小数点数の定数テーブル (caml2html: virtual_data) *)
 
 let classify xts ini addf addi =
+(*
+  (変数名, 型)のリストxtsに対して, fold_leftによって, 
+    add (... (add (add ini xt1) xt2) ...) xtn
+  を計算する.
+  この際, xtの型によって適用する関数がaddiかaddfか異なることに注意する.
+
+  Args
+    xts : (Id.t * Type.t) list
+      fold_leftの対象のリスト
+    ini : Id.t * Type.t
+      fold_leftの初期値
+    addf : 
+     
+    addi :
+
+
+  Returns
+
+*)
   List.fold_left
-    (fun acc (x, t) ->
+    (
+      fun acc (x, t) ->
       match t with
       | Type.Unit -> acc
       | Type.Float -> addf acc x
-      | _ -> addi acc x t)
+      | _ -> addi acc x t
+    )
     ini
     xts
 

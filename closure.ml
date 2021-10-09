@@ -1,4 +1,4 @@
-type closure = { entry : Id.l; actual_fv : Id.t list }
+type closure = { entry : Id.l; actual_fv : Id.t list } (* トップレベル関数のラベル, 自由変数のリスト *)
 type t = (* クロージャ変換後の式 (caml2html: closure_t) *)
   | Unit
   | Int of int
@@ -15,7 +15,7 @@ type t = (* クロージャ変換後の式 (caml2html: closure_t) *)
   | IfLE of Id.t * Id.t * t * t
   | Let of (Id.t * Type.t) * t * t
   | Var of Id.t
-  | MakeCls of (Id.t * Type.t) * closure * t
+  | MakeCls of (Id.t * Type.t) * closure * t  (*(関数名, 関数の型), クロージャ, 関数の本体 *)
   | AppCls of Id.t * Id.t list
   | AppDir of Id.l * Id.t list
   | Tuple of Id.t list
@@ -30,6 +30,17 @@ type fundef = { name : Id.l * Type.t;
 type prog = Prog of fundef list * t
 
 let rec fv = function
+(* 
+    与えられたクロージャ変換後の式cの中に含まれる自由変数のリストを出力する.
+
+    Args
+        c : Closure.t
+          自由変数の変数を計算したいクロージャ変換後の式
+
+    Returns
+        retval : S.t
+          cが含む自由変数の集合            
+*)
   | Unit | Int(_) | Float(_) | ExtArray(_) -> S.empty
   | Neg(x) | FNeg(x) -> S.singleton x
   | Add(x, y) | Sub(x, y) | FAdd(x, y) | FSub(x, y) | FMul(x, y) | FDiv(x, y) | Get(x, y) -> S.of_list [x; y]
@@ -45,6 +56,23 @@ let rec fv = function
 let toplevel : fundef list ref = ref []
 
 let rec g env known = function (* クロージャ変換ルーチン本体 (caml2html: closure_g) *)
+(* 
+    環境envと自由変数がないとわかっている関数の集合known, K正規化後の式kを受け取ってそれをクロージャ変換する.
+
+    Args
+        env : M.t
+          現在の変数名と,その型のマッピング
+        known : S.t
+          自由変数を持たないことがわかっているトップレベル関数の集合
+
+        k : KNormal.t
+          変換したいK正規化後の式
+
+    Returns
+        retval : Closure.t
+          クロージャ変換後の式   
+
+*)
   | KNormal.Unit -> Unit
   | KNormal.Int(i) -> Int(i)
   | KNormal.Float(d) -> Float(d)
@@ -74,7 +102,7 @@ let rec g env known = function (* クロージャ変換ルーチン本体 (caml2html: closure
       let zs = S.diff (fv e1') (S.of_list (List.map fst yts)) in
       let known', e1' =
         if S.is_empty zs then known', e1' else
-        (* 駄目だったら状態(toplevelの値)を戻して、クロージャ変換をやり直す *)
+        (* e1に自由変数が含まれるなら状態(toplevelの値)を戻して、クロージャ変換をやり直す *)
         (Format.eprintf "free variable(s) %s found in function %s@." (Id.pp_list (S.elements zs)) x;
          Format.eprintf "function %s cannot be directly applied in fact@." x;
          toplevel := toplevel_backup;
@@ -101,6 +129,246 @@ let rec g env known = function (* クロージャ変換ルーチン本体 (caml2html: closure
   | KNormal.ExtFunApp(x, ys) -> AppDir(Id.L("min_caml_" ^ x), ys)
 
 let f e =
+(*
+  モジュール内の変数toplevelを空リストで初期化して, Closure.gを呼ぶ.
+  この空リストはトップレベル関数を記録するのに使われる.
+
+  Args
+    e : KNormal.t
+    変換前の式(プログラム)
+
+  Returns
+    retval : Closure.plog
+      変換後のプログラム(トップレベル関数のリストと変換後の式の組) 
+*)
   toplevel := [];
   let e' = g M.empty S.empty e in
   Prog(List.rev !toplevel, e')
+
+let rec output_closure outchan e depth = 
+(* 
+    与えられた正規化後の式kをチャネルoutchanに出力する.
+
+    Args
+        outchan : out_channel
+          出力先のチャンネル
+        e : Closure.t
+          出力するクロージャ変換後の式
+        depth : int
+          構文解析木の深さ
+
+    Returns
+        retval : unit
+          なし            
+*)
+  match e with
+  | Unit -> ()
+  | Int i -> 
+  (
+    Id.output_tab outchan depth;
+    output_string outchan ("INT " ^ (string_of_int i))
+  )
+  | Float f -> 
+  (
+    Id.output_tab outchan depth;
+    output_string outchan ("FLOAT " ^ (string_of_float f))
+  )
+  | Neg t ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "NEG ";
+    Id.output_id outchan t;
+  )
+  | Add (t1, t2) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "ADD ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | Sub (t1, t2) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "SUB ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | FNeg (t) -> 
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "FNEG ";
+    Id.output_id outchan t;
+  )
+  | FAdd (t1, t2) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "FADD ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | FSub (t1, t2) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "FSUB ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | FMul (t1, t2) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "FMUL ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | FDiv (t1, t2) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "FDIV ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | IfEq (t1, t2, t3, t4) -> (* 比較 + 分岐 (caml2html: knormal_branch) *)
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "IFEQ ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+    output_closure outchan t3 (depth + 1);
+    output_closure outchan t4 (depth + 1);
+  )
+  | IfLE (t1, t2, t3, t4) -> (* 比較 + 分岐 (caml2html: knormal_branch) *)
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "IFLE ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+    output_closure outchan t3 (depth + 1);
+    output_closure outchan t4 (depth + 1);
+  )
+  | Let (t1, t2, t3) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "LET ";
+    Id.output_id outchan (fst t1);
+    output_closure outchan t2 (depth + 1);
+    output_closure outchan t3 (depth + 1);
+  )
+  | Var (x) -> 
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "VAR ";
+    Id.output_id outchan x;
+  )
+  | MakeCls ((funname, funtype), funclosure, funbody) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "MAKECLS { funname = ";
+    Id.output_id outchan funname;
+    output_string outchan " funtype = ";
+    Type.output_type outchan funtype;
+    Id.output_tab outchan (depth + 1);
+    output_string outchan "funclosure = { ";
+    output_funclosure outchan funclosure;
+    output_string outchan " }";
+    Id.output_tab outchan (depth + 1);
+    output_string outchan "funcbody = { ";
+    output_closure outchan funbody (depth + 1);
+    output_string outchan " }";
+  )
+  | AppCls (funname, funargs) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "APPCLS ";
+    Id.output_id outchan funname;
+    output_string outchan " "; 
+    Id.output_id_list outchan funargs;
+  )
+  | AppDir (funlabel, funargs) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "APPDIR ";
+    Id.output_label outchan funlabel;
+    output_string outchan " "; 
+    Id.output_id_list outchan funargs;
+  )
+  | Tuple (ts) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "(";
+    Id.output_id_list outchan ts;
+    output_string outchan ")"
+  )
+  | LetTuple (t1s, t2, t3) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "LET ";
+    output_string outchan "(";
+    Id.output_id_list outchan (fst (List.split t1s));
+    output_string outchan ")";
+    output_string outchan " ";
+    Id.output_id outchan t2;
+    output_closure outchan t3 (depth + 1);
+  )
+  | Get (t1, t2) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "GET ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | Put (t1, t2, t3) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "PUT ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+    output_string outchan " ";
+    Id.output_id outchan t3;
+  )
+  | ExtArray (t) ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "EXTARRAY ";
+    Id.output_label outchan t;
+  )
+
+and output_funclosure outchan { entry = funlabel; actual_fv = funfv } = 
+    output_string outchan "{ entry : ";
+    Id.output_label outchan funlabel;
+    output_string outchan " , actual_fv : ";
+    Id.output_id_list outchan funfv;
+    output_string outchan " }";
+
+and output_fundef outchan { name = funname; args = funargs; formal_fv = funfv; body = funbody } depth = 
+    Id.output_tab outchan depth;
+    output_string outchan "{ name : ";
+    Id.output_label outchan (fst(funname));
+    output_string outchan " , args : ";
+    Id.output_id_list outchan (fst (List.split funargs));
+    output_string outchan " , formal_fv : ";
+    Id.output_id_list outchan (fst (List.split funfv));
+    output_string outchan " , body : ";
+    output_closure outchan funbody depth;
+    output_string outchan " }";
+
+and output_fundef_list outchan ds depth = 
+  let f d =
+      output_fundef outchan d depth
+  in List.iter f ds;
+
+and output_prog outchan (Prog (top, e)) depth = 
+  output_string outchan "TOPLEVEL";
+  output_fundef_list outchan top (depth + 1);
+  Id.output_tab outchan depth;
+  output_string outchan "MAIN";
+  output_closure outchan e (depth + 1)

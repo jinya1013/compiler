@@ -39,8 +39,16 @@ let output_id outchan i =
   output_string outchan i
 
 let output_id_list outchan is = 
-  let f i = 
-    output_string outchan ", ";
-    output_id outchan i in
-  output_id outchan (List.hd is);
-  List.iter f is
+  match is with
+  | [] -> ()
+  | _ ->
+  (
+    let f i = 
+      output_string outchan ", ";
+      output_id outchan i in
+    output_id outchan (List.hd is);
+    List.iter f is
+  )
+
+let output_label outchan = function
+| L (l) -> output_string outchan l
