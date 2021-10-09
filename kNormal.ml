@@ -209,170 +209,204 @@ let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
 let f e = fst (g M.empty e)
 
 
-let rec output_knormal outchan k = 
+let rec output_knormal outchan k depth = 
+(* 
+    与えられた正規化後の式kをチャネルoutchanに出力する.
+
+    Args
+        outchan : out_channel
+          出力先のチャンネル
+        k : KNormal.t
+          出力する正規化後の式
+        depth : int
+          構文解析木の深さ
+
+    Returns
+        retval : unit
+          なし            
+*)
   match k with
   | Unit -> ()
-  | Int (i) -> output_string outchan (string_of_int i)
-  | Float (f) -> output_string outchan (string_of_float f)
-  | Neg (t) -> 
+  | Int i -> 
   (
-    output_string outchan "Neg( ";
+    Id.output_tab outchan depth;
+    output_string outchan ("INT " ^ (string_of_int i))
+  )
+  | Float f -> 
+  (
+    Id.output_tab outchan depth;
+    output_string outchan ("FLOAT " ^ (string_of_float f))
+  )
+  | Neg t ->
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "NEG ";
     Id.output_id outchan t;
-    output_string outchan " )"
   )
   | Add (t1, t2) ->
   (
-    output_string outchan "Add( ";
+    Id.output_tab outchan depth;
+    output_string outchan "ADD ";
     Id.output_id outchan t1;
-    output_string outchan ", ";
+    output_string outchan " ";
     Id.output_id outchan t2;
-    output_string outchan " )"
   )
   | Sub (t1, t2) ->
   (
-    output_string outchan "Sub( ";
+    Id.output_tab outchan depth;
+    output_string outchan "SUB ";
     Id.output_id outchan t1;
-    output_string outchan ", ";
+    output_string outchan " ";
     Id.output_id outchan t2;
-    output_string outchan " )"
   )
   | FNeg (t) -> 
   (
-    output_string outchan "FNeg( ";
+    Id.output_tab outchan depth;
+    output_string outchan "FNEG ";
     Id.output_id outchan t;
-    output_string outchan " )"
   )
   | FAdd (t1, t2) ->
   (
-    output_string outchan "FAdd( ";
+    Id.output_tab outchan depth;
+    output_string outchan "FADD ";
     Id.output_id outchan t1;
-    output_string outchan ", ";
+    output_string outchan " ";
     Id.output_id outchan t2;
-    output_string outchan " )"
   )
   | FSub (t1, t2) ->
   (
-    output_string outchan "FSub( ";
+    Id.output_tab outchan depth;
+    output_string outchan "FSUB ";
     Id.output_id outchan t1;
-    output_string outchan ", ";
+    output_string outchan " ";
     Id.output_id outchan t2;
-    output_string outchan " )"
   )
   | FMul (t1, t2) ->
   (
-    output_string outchan "FMul( ";
+    Id.output_tab outchan depth;
+    output_string outchan "FMUL ";
     Id.output_id outchan t1;
-    output_string outchan ", ";
+    output_string outchan " ";
     Id.output_id outchan t2;
-    output_string outchan " )"
   )
   | FDiv (t1, t2) ->
   (
-    output_string outchan "FDiv( ";
+    Id.output_tab outchan depth;
+    output_string outchan "FDIV ";
     Id.output_id outchan t1;
-    output_string outchan ", ";
+    output_string outchan " ";
     Id.output_id outchan t2;
-    output_string outchan " )"
   )
   | IfEq (t1, t2, t3, t4) -> (* 比較 + 分岐 (caml2html: knormal_branch) *)
   (
-    output_string outchan "IfEq( ";
+    Id.output_tab outchan depth;
+    output_string outchan "IFEQ ";
     Id.output_id outchan t1;
-    output_string outchan ", ";
+    output_string outchan " ";
     Id.output_id outchan t2;
-    output_string outchan ", ";
-    output_knormal outchan t3;
-    output_string outchan ", ";
-    output_knormal outchan t4;
-    output_string outchan " )"
+    output_knormal outchan t3 (depth + 1);
+    output_knormal outchan t4 (depth + 1);
   )
   | IfLE (t1, t2, t3, t4) -> (* 比較 + 分岐 (caml2html: knormal_branch) *)
   (
-    output_string outchan "IfLE( ";
+    Id.output_tab outchan depth;
+    output_string outchan "IFLE ";
     Id.output_id outchan t1;
-    output_string outchan ", ";
+    output_string outchan " ";
     Id.output_id outchan t2;
-    output_string outchan ", ";
-    output_knormal outchan t3;
-    output_string outchan ", ";
-    output_knormal outchan t4;
-    output_string outchan " )"
+    output_knormal outchan t3 (depth + 1);
+    output_knormal outchan t4 (depth + 1);
   )
   | Let (t1, t2, t3) ->
   (
-    output_string outchan "Let( ";
+    Id.output_tab outchan depth;
+    output_string outchan "LET ";
     Id.output_id outchan (fst t1);
-    output_string outchan ", ";
-    output_knormal outchan t2;
-    output_string outchan ", ";
-    output_knormal outchan t3;
-    output_string outchan " )"
+    output_knormal outchan t2 (depth + 1);
+    output_knormal outchan t3 (depth + 1);
   )
-  | Var (x) -> Id.output_id outchan x
+  | Var (x) -> 
+  (
+    Id.output_tab outchan depth;
+    output_string outchan "VAR ";
+    Id.output_id outchan x;
+  )
   | LetRec ({ name = f; args = a; body = b }, t) ->
   (
-    output_string outchan "LetRec( { name = ";
+    Id.output_tab outchan depth;
+    output_string outchan "LETREC ";
+    Id.output_tab outchan depth;
+    output_string outchan "{";
+    Id.output_tab outchan (depth + 1);
+    output_string outchan "name = ";
     Id.output_id outchan (fst f);
-    output_string outchan ", args = ( ";
+    Id.output_tab outchan (depth + 1);
+    output_string outchan "args = ";
+    output_string outchan "(";
     Id.output_id_list outchan (fst (List.split a));
-    output_string outchan " ), body = ";
-    output_knormal outchan b;
-    output_string outchan " }, ";
-    output_knormal outchan t;
-    output_string outchan " )";
+    output_string outchan ")";
+    Id.output_tab outchan (depth + 1);
+    output_string outchan "body = ";
+    output_knormal outchan b (depth + 2);
+    Id.output_tab outchan depth;
+    output_string outchan "}";
+    output_knormal outchan t (depth + 1); 
   )
   | App (t, ts) ->
   (
-    output_string outchan "App( ";
+    Id.output_tab outchan depth;
+    output_string outchan "APP ";
     Id.output_id outchan t;
+    output_string outchan " ";
     Id.output_id_list outchan ts;
-    output_string outchan " )"
-
   )
   | Tuple (ts) ->
   (
-    output_string outchan "( ";
+    Id.output_tab outchan depth;
+    output_string outchan "(";
     Id.output_id_list outchan ts;
-    output_string outchan " )"
+    output_string outchan ")"
   )
   | LetTuple (t1s, t2, t3) ->
   (
-    output_string outchan "Let( ( ";
+    Id.output_tab outchan depth;
+    output_string outchan "LET ";
+    output_string outchan "(";
     Id.output_id_list outchan (fst (List.split t1s));
-    output_string outchan " ), ";
+    output_string outchan ")";
+    output_string outchan " ";
     Id.output_id outchan t2;
-    output_string outchan ", ";
-    output_knormal outchan t3;
-    output_string outchan " )";
+    output_knormal outchan t3 (depth + 1);
   )
   | Get (t1, t2) ->
   (
-    output_string outchan "Get( ";
+    Id.output_tab outchan depth;
+    output_string outchan "GET ";
     Id.output_id outchan t1;
-    output_string outchan ", ";
+    output_string outchan " ";
     Id.output_id outchan t2;
-    output_string outchan " )"
   )
   | Put (t1, t2, t3) ->
   (
-    output_string outchan "Put( ";
+    Id.output_tab outchan depth;
+    output_string outchan "PUT ";
     Id.output_id outchan t1;
-    output_string outchan ", ";
+    output_string outchan " ";
     Id.output_id outchan t2;
-    output_string outchan ", ";
+    output_string outchan " ";
     Id.output_id outchan t3;
-    output_string outchan " )"
   )
   | ExtArray (t) ->
   (
-    output_string outchan "ExtArray( ";
+    Id.output_tab outchan depth;
+    output_string outchan "EXTARRAY ";
     Id.output_id outchan t;
-    output_string outchan " )"
   )
   | ExtFunApp (t, ts) ->
   (
-    output_string outchan "ExtFunApp( ";
+    Id.output_tab outchan depth;
+    output_string outchan "EXTFUNAPP ";
     Id.output_id outchan t;
+    output_string outchan " ";
     Id.output_id_list outchan ts;
-    output_string outchan " )"
   )
