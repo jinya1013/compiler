@@ -1,1 +1,1 @@
-val f : Asm.prog -> Asm.prog
+val f : Asm.prog -> out_channel-> Asm.prog
