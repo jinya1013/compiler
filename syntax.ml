@@ -159,7 +159,7 @@ let rec output_syntax outchan s depth =
   | Let (t1, t2, t3, p) ->
   (
     Id.output_tab2 outchan depth p;
-    output_string outchan "LET";
+    output_string outchan "LET ";
     Id.output_id outchan (fst t1);
     output_syntax outchan t2 (depth + 1);
     output_syntax outchan t3 (depth + 1);

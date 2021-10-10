@@ -244,6 +244,6 @@ let f e =
   (try unify Syntax.top_pos Type.Unit (g M.empty e)
   with 
     | Unify _ -> failwith "top level does not have type unit"
-    | Error (_, _, _, p) -> failwith (Printf.sprintf "top level Error in line %d" p));
+    | Error (_, _, _, p) -> print_newline (); failwith (Printf.sprintf "top level Error in line %d" p));
   extenv := M.map deref_typ !extenv;
   deref_term e
