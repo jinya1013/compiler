@@ -1,4 +1,4 @@
-type t = (* KÀµµ¬²½¸å¤Î¼° (caml2html: knormal_t) *)
+type t = (* Kï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î¼ï¿½ (caml2html: knormal_t) *)
   | Unit of Syntax.pos
   | Int of int * Syntax.pos
   | Float of float * Syntax.pos
@@ -10,8 +10,8 @@ type t = (* KÀµµ¬²½¸å¤Î¼° (caml2html: knormal_t) *)
   | FSub of Id.t * Id.t * Syntax.pos
   | FMul of Id.t * Id.t * Syntax.pos
   | FDiv of Id.t * Id.t * Syntax.pos
-  | IfEq of Id.t * Id.t * t * t  * Syntax.pos (* Èæ³Ó + Ê¬´ô (caml2html: knormal_branch) *)
-  | IfLE of Id.t * Id.t * t * t  * Syntax.pos (* Èæ³Ó + Ê¬´ô *)
+  | IfEq of Id.t * Id.t * t * t  * Syntax.pos (* ï¿½ï¿½ï¿½ + Ê¬ï¿½ï¿½ (caml2html: knormal_branch) *)
+  | IfLE of Id.t * Id.t * t * t  * Syntax.pos (* ï¿½ï¿½ï¿½ + Ê¬ï¿½ï¿½ *)
   | Let of (Id.t * Type.t) * t * t  * Syntax.pos
   | Var of Id.t * Syntax.pos
   | LetRec of fundef * t * Syntax.pos
