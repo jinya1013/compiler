@@ -1,28 +1,31 @@
-type t =
-  | Unit
-  | Int of int
-  | Float of float
-  | Neg of Id.t
-  | Add of Id.t * Id.t
-  | Sub of Id.t * Id.t
-  | FNeg of Id.t
-  | FAdd of Id.t * Id.t
-  | FSub of Id.t * Id.t
-  | FMul of Id.t * Id.t
-  | FDiv of Id.t * Id.t
-  | IfEq of Id.t * Id.t * t * t
-  | IfLE of Id.t * Id.t * t * t
-  | Let of (Id.t * Type.t) * t * t
-  | Var of Id.t
-  | LetRec of fundef * t
-  | App of Id.t * Id.t list
-  | Tuple of Id.t list
-  | LetTuple of (Id.t * Type.t) list * Id.t * t
-  | Get of Id.t * Id.t
-  | Put of Id.t * Id.t * Id.t
-  | ExtArray of Id.t
-  | ExtFunApp of Id.t * Id.t list
+type t = (* KÀµµ¬²½¸å¤Î¼° (caml2html: knormal_t) *)
+  | Unit of Syntax.pos
+  | Int of int * Syntax.pos
+  | Float of float * Syntax.pos
+  | Neg of Id.t * Syntax.pos
+  | Add of Id.t * Id.t * Syntax.pos
+  | Sub of Id.t * Id.t * Syntax.pos
+  | FNeg of Id.t * Syntax.pos
+  | FAdd of Id.t * Id.t * Syntax.pos
+  | FSub of Id.t * Id.t * Syntax.pos
+  | FMul of Id.t * Id.t * Syntax.pos
+  | FDiv of Id.t * Id.t * Syntax.pos
+  | IfEq of Id.t * Id.t * t * t  * Syntax.pos (* Èæ³Ó + Ê¬´ô (caml2html: knormal_branch) *)
+  | IfLE of Id.t * Id.t * t * t  * Syntax.pos (* Èæ³Ó + Ê¬´ô *)
+  | Let of (Id.t * Type.t) * t * t  * Syntax.pos
+  | Var of Id.t * Syntax.pos
+  | LetRec of fundef * t * Syntax.pos
+  | App of Id.t * Id.t list * Syntax.pos
+  | Tuple of Id.t list * Syntax.pos
+  | LetTuple of (Id.t * Type.t) list * Id.t * t * Syntax.pos
+  | Get of Id.t * Id.t * Syntax.pos
+  | Put of Id.t * Id.t * Id.t * Syntax.pos
+  | ExtArray of Id.t * Syntax.pos
+  | ExtFunApp of Id.t * Id.t list * Syntax.pos
 and fundef = { name : Id.t * Type.t; args : (Id.t * Type.t) list; body : t }
 
 val fv : t -> S.t
 val f : Syntax.t -> t
+val output_knormal : out_channel -> t  -> int -> unit
+val output_prog : out_channel -> t  -> unit
+
