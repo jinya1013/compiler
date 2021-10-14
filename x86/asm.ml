@@ -353,12 +353,12 @@ let p = pos_of_t funbody in
   Id.output_id_list outchan floatargs;
   Id.output_tab2 outchan depth p;
   output_string outchan "FUNBODY : ";
-  Id.output_tab2 outchan (depth + 1) p;
   output_t outchan (depth + 1) funbody;
   Id.output_tab2 outchan depth p;
   output_string outchan "RETURNTYPE : ";
   Type.output_type outchan returntype
 and output_prog outchan (Prog(table, f, e)) =
+  output_string outchan " \t";
   output_string outchan "FLOAT_TABLE";
   List.iter 
   (
@@ -375,7 +375,7 @@ and output_prog outchan (Prog(table, f, e)) =
   List.iter 
   (
     fun _f ->
-    Id.output_tab outchan 0;
+    (* Id.output_tab outchan 0; *)
     output_func outchan 1 _f
   ) 
   f;

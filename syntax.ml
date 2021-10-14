@@ -243,3 +243,209 @@ and output_syntax_list outchan ts depth =
     output_syntax outchan t (depth + 1) in
   output_syntax outchan (List.hd ts) (depth + 1);
   List.iter f (List.tl ts)
+and output_prog outchan s = 
+(* 
+    与えられた式sをチャネルoutchanに出力する.
+
+    Args
+        outchan : out_channel
+          出力先のチャンネル
+        s : Syntax.t
+          出力する式
+
+    Returns
+        retval : unit
+          なし            
+*)
+  match s with
+  | Unit(p)  -> 
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+  )
+  | Bool(b,p) -> 
+  (
+    if b then 
+    (
+    output_string outchan ((string_of_int p) ^ "\t");
+      output_string outchan "BOOL TRUE"
+    )
+    else 
+    (
+    output_string outchan ((string_of_int p) ^ "\t");
+      output_string outchan "BOOL FALSE"
+    )
+  )
+  | Int (i,p) -> 
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan ("INT " ^ (string_of_int i))
+  )
+  | Float (f,p) -> 
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan ("FLOAT " ^ (string_of_float f))
+  )
+  | Not (t,p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "NOT";
+    output_syntax outchan t 1;
+  )
+  | Neg (t,p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "NEG";
+    output_syntax outchan t 1;
+  )
+  | Add (t1, t2,p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "ADD";
+    output_syntax outchan t1 1;
+    output_syntax outchan t2 1;
+  )
+  | Sub (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "SUB";
+    output_syntax outchan t1 1;
+    output_syntax outchan t2 1;
+  )
+  | FNeg (t,p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FNEG";
+    output_syntax outchan t 1;
+  )
+  | FAdd (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FADD";
+    output_syntax outchan t1 1;
+    output_syntax outchan t2 1;
+  )
+  | FSub (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FSUB";
+    output_syntax outchan t1 1;
+    output_syntax outchan t2 1;
+  )
+  | FMul (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FMUL";
+    output_syntax outchan t1 1;
+    output_syntax outchan t2 1;
+  )
+  | FDiv (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FDIV";
+    output_syntax outchan t1 1;
+    output_syntax outchan t2 1;
+  )
+  | Eq (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "EQ";
+    output_syntax outchan t1 1;
+    output_syntax outchan t2 1;
+  )
+  | LE (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "LE";
+    output_syntax outchan t1 1;
+    output_syntax outchan t2 1;
+  )
+  | If (c, t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "IF";
+    output_syntax outchan c 1;
+    output_syntax outchan t1 1;
+    output_syntax outchan t2 1;
+  )
+  | Let (t1, t2, t3, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "LET ";
+    Id.output_id outchan (fst t1);
+    output_syntax outchan t2 1;
+    output_syntax outchan t3 1;
+  )
+  | Var (x, p) -> 
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "VAR ";
+    Id.output_id outchan x;
+  )
+  | LetRec ({ name = f; args = a; body = b }, t, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "LETREC";
+    Id.output_tab2 outchan 0 p;
+    output_string outchan "{";
+    Id.output_tab2 outchan 1 p;
+    output_string outchan "name = ";
+    Id.output_id outchan (fst f);
+    Id.output_tab2 outchan 1 p;
+    output_string outchan "args = ";
+    output_string outchan "(";
+    Id.output_id_list outchan (fst (List.split a));
+    output_string outchan ")";
+    Id.output_tab2 outchan 1 p;
+    output_string outchan "body = ";
+    output_syntax outchan b 2;
+    Id.output_tab2 outchan 0 p;
+    output_string outchan "}";
+    output_syntax outchan t 1; 
+  )
+
+  | App (t, ts, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "APP";
+    output_syntax outchan t 1;
+    output_syntax_list outchan ts 1;
+  )
+  | Tuple (ts, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "(";
+    output_syntax_list outchan ts 1;
+    output_string outchan ")";
+  )
+  | LetTuple (t1s, t2, t3, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "LET";
+    output_string outchan "(";
+    Id.output_id_list outchan (fst (List.split t1s));
+    output_string outchan ")";
+    output_syntax outchan t2 1;
+    output_syntax outchan t3 1;
+  )
+  | Array (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "ARRAY";
+    output_syntax outchan t1 1;
+    output_syntax outchan t2 1;
+  )
+  | Get (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "GET";
+    output_syntax outchan t1 1;
+    output_syntax outchan t2 1;
+  )
+  | Put (t1, t2, t3, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "PUT";
+    output_syntax outchan t1 1;
+    output_syntax outchan t2 1;
+    output_syntax outchan t3 1;
+  )

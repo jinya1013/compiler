@@ -427,9 +427,10 @@ and output_fundef_list outchan ds depth =
       output_fundef outchan d depth
   in List.iter f ds;
 
-and output_prog outchan (Prog (top, e)) depth = 
+and output_prog outchan (Prog (top, e)) = 
+  output_string outchan (" \t");
   output_string outchan "TOPLEVEL";
-  output_fundef_list outchan top (depth + 1);
-  Id.output_tab outchan depth;
+  output_fundef_list outchan top 1;
+  Id.output_tab2 outchan 0 (-1);
   output_string outchan "MAIN";
-  output_closure outchan e (depth + 1)
+  output_closure outchan e 1

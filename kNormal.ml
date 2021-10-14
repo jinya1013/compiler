@@ -413,3 +413,205 @@ let rec output_knormal outchan k depth =
     output_string outchan " ";
     Id.output_id_list outchan ts;
   )
+and output_prog outchan k = 
+(* 
+    与えられた正規化後の式kをチャネルoutchanに出力する.
+
+    Args
+        outchan : out_channel
+          出力先のチャンネル
+        k : KNormal.t
+          出力する正規化後の式
+
+    Returns
+        retval : unit
+          なし            
+*)
+  match k with
+  | Unit(p) -> 
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+  )
+  | Int (i, p) -> 
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan ("INT " ^ (string_of_int i))
+  )
+  | Float (f, p) -> 
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan ("FLOAT " ^ (string_of_float f))
+  )
+  | Neg (t, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "NEG ";
+    Id.output_id outchan t;
+  )
+  | Add (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "ADD ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | Sub (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "SUB ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | FNeg (t, p) -> 
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FNEG ";
+    Id.output_id outchan t;
+  )
+  | FAdd (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FADD ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | FSub (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FSUB ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | FMul (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FMUL ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | FDiv (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FDIV ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | IfEq (t1, t2, t3, t4, p) -> (* 比較 + 分岐 (caml2html: knormal_branch) *)
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "IFEQ ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+    output_knormal outchan t3 1;
+    output_knormal outchan t4 1;
+  )
+  | IfLE (t1, t2, t3, t4, p) -> (* 比較 + 分岐 (caml2html: knormal_branch) *)
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "IFLE ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+    output_knormal outchan t3 1;
+    output_knormal outchan t4 1;
+  )
+  | Let (t1, t2, t3, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "LET ";
+    Id.output_id outchan (fst t1);
+    output_knormal outchan t2 1;
+    output_knormal outchan t3 1;
+  )
+  | Var (x, p) -> 
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "VAR ";
+    Id.output_id outchan x;
+  )
+  | LetRec ({ name = f; args = a; body = b }, t, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "LETREC ";
+    Id.output_tab2 outchan 0 p;
+    output_string outchan "{";
+    Id.output_tab2 outchan 1 p;
+    output_string outchan "name = ";
+    Id.output_id outchan (fst f);
+    Id.output_tab2 outchan 1 p;
+    output_string outchan "args = ";
+    output_string outchan "(";
+    Id.output_id_list outchan (fst (List.split a));
+    output_string outchan ")";
+    Id.output_tab2 outchan 1 p;
+    output_string outchan "body = ";
+    output_knormal outchan b 2;
+    Id.output_tab2 outchan 0 p;
+    output_string outchan "}";
+    output_knormal outchan t 1; 
+  )
+  | App (t, ts, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "APP ";
+    Id.output_id outchan t;
+    output_string outchan " ";
+    Id.output_id_list outchan ts;
+  )
+  | Tuple (ts, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "(";
+    Id.output_id_list outchan ts;
+    output_string outchan ")"
+  )
+  | LetTuple (t1s, t2, t3, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "LET ";
+    output_string outchan "(";
+    Id.output_id_list outchan (fst (List.split t1s));
+    output_string outchan ")";
+    output_string outchan " ";
+    Id.output_id outchan t2;
+    output_knormal outchan t3 1;
+  )
+  | Get (t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "GET ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+  )
+  | Put (t1, t2, t3, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "PUT ";
+    Id.output_id outchan t1;
+    output_string outchan " ";
+    Id.output_id outchan t2;
+    output_string outchan " ";
+    Id.output_id outchan t3;
+  )
+  | ExtArray (t, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "EXTARRAY ";
+    Id.output_id outchan t;
+  )
+  | ExtFunApp (t, ts, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "EXTFUNAPP ";
+    Id.output_id outchan t;
+    output_string outchan " ";
+    Id.output_id_list outchan ts;
+  )

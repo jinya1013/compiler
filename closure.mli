@@ -35,5 +35,5 @@ val output_closure : out_channel -> t -> int -> unit
 val output_funclosure : out_channel -> closure -> unit
 val output_fundef : out_channel -> fundef -> int -> unit
 val output_fundef_list : out_channel -> fundef list -> int -> unit
-val output_prog : out_channel -> prog -> int -> unit
+val output_prog : out_channel -> prog -> unit
 val pos_of_t: t -> Syntax.pos
