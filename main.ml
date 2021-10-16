@@ -30,22 +30,22 @@ let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana
         (let v = Virtual.f
           (let c = Closure.f
             (let i = iter !limit
-              (let abc = RmExp.f
-                (let a = Alpha.f 
+              (let a = Alpha.f
+                (let abc = RmExp.f 
                   (let k = KNormal.f
                     (let t = Typing.f
                       (
-                        let p = Parser.exp Lexer.token l in Syntax.output_prog outchanp p; p
+                        let p = Parser.exp Lexer.token l in output_string outchanp "AFTER PARSE\n"; Syntax.output_prog outchanp p; p
                       )
-                    in Syntax.output_prog outchant t; t)
-                  in KNormal.output_prog outchank k; k)
-                in KNormal.output_prog outchana a; a)
-              in KNormal.output_prog outchana abc; abc)
-            in KNormal.output_prog outchani i; i)
-          in Closure.output_prog outchanc c; c)
-        in Asm.output_prog outchanv v; v)
-      in Asm.output_prog outchans s; s)
-    in Asm.output_prog outchanr r; r)
+                    in output_string outchant "AFTER TYPING\n"; Syntax.output_prog outchant t; t)
+                  in output_string outchank "AFTER KNORMAL\n"; KNormal.output_prog outchank k; k)
+                in output_string outchank "AFTER REMOVE_COMMON_EXP\n"; KNormal.output_prog outchank abc; abc)
+              in output_string outchana "AFTER ALPHA_TRANSFORM\n"; KNormal.output_prog outchana a; a)
+            in output_string outchani "AFTER ITER\n"; KNormal.output_prog outchani i; i)
+          in output_string outchanc "AFTER CLOSURE_TRANSFORM\n"; Closure.output_prog outchanc c; c)
+        in output_string outchanv "AFTER VIRTUAL_TRANSFORM\n"; Asm.output_prog outchanv v; v)
+      in output_string outchans "AFTER SIMM\n"; Asm.output_prog outchans s; s)
+    in output_string outchanr "AFTER REGALLOC\n";Asm.output_prog outchanr r; r)
 
 let string s = lexbuf_verbose stdout stdout stdout stdout stdout stdout stdout stdout stdout stdout (Lexing.from_string s) (* ???�?????????��?��????��????????�?�???��?????�?示�????? (caml2html: main_string) *)
 

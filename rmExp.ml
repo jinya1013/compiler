@@ -4,14 +4,6 @@ open KNormal
 let empty_env = []
 let add_env env (xt:(Id.t * Type.t)) (exp:KNormal.t)  = (xt,exp)::env
 
-let sbst (a : Id.t) (b : Id.t) = function
-| Unit(_) as exp -> exp
-| Int(x, y, _) -> 
-(
-  if x = a 
-)
-
-
 let rec check_same_exp (t1: KNormal.t) (t2: KNormal.t) =
   match t1,t2 with
   | Unit(_),Unit(_) -> true
@@ -41,24 +33,24 @@ let rec check_same_exp (t1: KNormal.t) (t2: KNormal.t) =
 
 and g t env =
   match t with
-  | Unit(_) | Int(_) | Float(_) | Neg(_) | Add(_) | Sub(_) | FNeg(_) | FAdd(_) | FSub(_) | FMul(_) | FDiv(_) | Var(_) | Tuple(_) | LetTuple(_) as exp -> exp
+  | Unit(_) | Int(_) | Float(_) | Neg(_) | Add(_) | Sub(_) | FNeg(_) | FAdd(_) | FSub(_) | FMul(_) | FDiv(_) | Var(_) | Tuple(_) | LetTuple(_) 
+  | Get(_) | Put(_) | App(_) | ExtArray(_) | ExtFunApp (_) as exp -> exp
   | IfEq(x, y, e1, e2, p) -> IfEq(x, y, g e1 empty_env, g e2 empty_env, p)
   | IfLE(x, y, e1, e2, p) -> IfLE(x, y, g e1 empty_env, g e2 empty_env, p)
-  | Let((x, t), e1, e2, p) -> (* let�Φ´��� (caml2html: beta_let) *)
-      (match find_exp e1 env with
+  | Let((x, t), e1, e2, p) as exp-> (* let�Φ´��� (caml2html: beta_let) *)
+    if (not (Elim.effect e1)) then
+      (
+        match find_exp e1 env with
       | Some(z) -> (  
         let e2' = g e2 env in
         (Format.eprintf "replace exp with %s in line %d" z p;Let((x,t), Var(z,p), e2', p))) 
       | _    ->  (  
         let e2' = g e2 (add_env env (x,t) e1) in
-        Let((x,t), e1, e2', p)))
+        Let((x,t), e1, e2', p))
+      )
+      else exp
   | LetRec({ name = xt; args = yts; body = e1 }, e2, p) ->
       LetRec({ name = xt; args = yts; body = g e1 empty_env }, g e2 env, p)
-  | Get(x, y, p) -> Get(x, y, p)
-  | Put(x, y, z, p) -> Put(x, y, z, p)
-  | App(a, xs, p) -> App(a, xs, p)
-  | ExtArray(x, p) -> ExtArray(x, p)
-  | ExtFunApp(x, ys, p) -> ExtFunApp(x, ys, p)
 and find_exp exp env :Id.t option =
   match env with
   | [] -> None
@@ -69,5 +61,5 @@ and find_exp exp env :Id.t option =
       find_exp exp envs)
 
 (* トップレベルの関数 *)
-let rec f (t:KNormal.t) = g t empty_env
+let rec f (t : KNormal.t) = g t empty_env
   

@@ -257,7 +257,8 @@ and output_prog outchan s =
         retval : unit
           ¤Ê¤·            
 *)
-  match s with
+  (
+    match s with
   | Unit(p)  -> 
   (
     output_string outchan ((string_of_int p) ^ "\t");
@@ -449,3 +450,5 @@ and output_prog outchan s =
     output_syntax outchan t2 1;
     output_syntax outchan t3 1;
   )
+  );
+  output_string outchan "\n";
