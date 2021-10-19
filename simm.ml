@@ -1,1 +1,1 @@
-x86/simm.ml
+SPARC/simm.ml

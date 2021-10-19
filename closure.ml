@@ -331,18 +331,27 @@ let rec output_closure outchan e depth =
   | MakeCls ((funname, funtype), funclosure, funbody, p) ->
   (
     Id.output_tab2 outchan depth p;
-    output_string outchan "MAKECLS { funname = ";
+    output_string outchan "MAKECLS";
+    Id.output_tab2 outchan depth p;
+    output_string outchan "{";
+    Id.output_tab2 outchan (depth + 1) p;
+    output_string outchan "funname = ";
     Id.output_id outchan funname;
-    output_string outchan " funtype = ";
+    Id.output_tab2 outchan (depth + 1) p;
+    output_string outchan "funtype = ";
     Type.output_type outchan funtype;
     Id.output_tab2 outchan (depth + 1) p;
-    output_string outchan "funclosure = { ";
+    output_string outchan "funclosure = ";
     output_funclosure outchan funclosure;
-    output_string outchan " }";
     Id.output_tab2 outchan (depth + 1) p;
-    output_string outchan "funcbody = { ";
-    output_closure outchan funbody (depth + 1);
-    output_string outchan " }";
+    output_string outchan "funcbody =";
+    Id.output_tab2 outchan (depth + 1) p;
+    output_string outchan "{";
+    output_closure outchan funbody (depth + 2);
+    Id.output_tab2 outchan (depth + 1) p;
+    output_string outchan "}";
+    Id.output_tab2 outchan depth p;
+    output_string outchan "}";
   )
   | AppCls (funname, funargs, p) ->
   (
@@ -411,16 +420,27 @@ and output_funclosure outchan { entry = funlabel; actual_fv = funfv } =
     output_string outchan " }";
 
 and output_fundef outchan { name = funname; args = funargs; formal_fv = funfv; body = funbody } depth = 
-    Id.output_tab outchan depth;
-    output_string outchan "{ name : ";
+    let p = pos_of_t funbody in
+    Id.output_tab2 outchan depth p;
+    output_string outchan "{";
+    Id.output_tab2 outchan (depth + 1) p;
+    output_string outchan "name : ";
     Id.output_label outchan (fst(funname));
-    output_string outchan " , args : ";
+    Id.output_tab2 outchan (depth + 1) p;
+    output_string outchan "args : ";
     Id.output_id_list outchan (fst (List.split funargs));
-    output_string outchan " , formal_fv : ";
+    Id.output_tab2 outchan (depth + 1) p;
+    output_string outchan "formal_fv : ";
     Id.output_id_list outchan (fst (List.split funfv));
-    output_string outchan " , body : ";
-    output_closure outchan funbody depth;
-    output_string outchan " }";
+    Id.output_tab2 outchan (depth + 1) p;
+    output_string outchan "body :";
+    Id.output_tab2 outchan (depth + 1) p;
+    output_string outchan "{";
+    output_closure outchan funbody (depth + 2);
+    Id.output_tab2 outchan (depth + 1) p;
+    output_string outchan "}";
+    Id.output_tab2 outchan depth p;
+    output_string outchan "}";
 
 and output_fundef_list outchan ds depth = 
   let f d =

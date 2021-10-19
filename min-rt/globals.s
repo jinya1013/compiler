@@ -1,1 +1,1 @@
-x86/globals.s
+SPARC/globals.s

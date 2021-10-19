@@ -1,1 +1,1 @@
-x86/toomanyargs.ml
+SPARC/toomanyargs.ml

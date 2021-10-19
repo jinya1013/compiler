@@ -18,21 +18,23 @@ let rec output_type outchan s =
   | Float -> output_string outchan "Float"
   | Fun(ts, t) -> 
   (
-    output_string outchan "Fun( ";
-    output_type_list outchan ts;
-    output_string outchan ", ";
+    List.iter (fun t -> output_type outchan t; output_string outchan " -> ") ts;
+    output_string outchan " ->  ";
     output_type outchan t;
-    output_string outchan " )"
   )
   | Tuple(ts) -> 
   (
-    output_string outchan "( ";
-    output_type_list outchan ts;
-    output_string outchan " )"
+    match ts with
+    | th :: tt -> 
+    (
+      output_type outchan th;
+      List.iter (fun t -> output_string outchan " * "; output_type outchan t) ts
+    )
+    | _ -> ()
   )
   | Array(t) ->
   (
-    output_string outchan "Fun( ";
+    output_string outchan "Array( ";
     output_type outchan t;
     output_string outchan " )"
   )

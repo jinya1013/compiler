@@ -1,1 +1,1 @@
-x86/libmincaml.S
+SPARC/libmincaml.S

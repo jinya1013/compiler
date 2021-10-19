@@ -37,6 +37,7 @@ inprod inprod-rec inprod-loop matmul matmul-flat \
 manyargs
 
 do_test: $(TESTS:%=test/%.cmp)
+# do_test: $(TESTS:%=test/%.s)
 
 .PRECIOUS: test/%.s test/% test/%.res test/%.ans test/%.cmp
 TRASH = $(TESTS:%=test/%.s) $(TESTS:%=test/%) $(TESTS:%=test/%.res) $(TESTS:%=test/%.ans) $(TESTS:%=test/%.cmp)

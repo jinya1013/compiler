@@ -50,7 +50,7 @@ let insert_let p (e, t) k = (* letを挿入する補助関数 (caml2html: knormal_insert)
         (e, t) : kNormal.t * Type.t
           変換したい式とその型の組
         k : Id.t -> kNormal.t * Type.t
-          変換の内容を記述する関数
+          変換の内容を記述する関数, 
 
     Returns
         retval : kNormal.t * Type.t
@@ -67,11 +67,11 @@ let insert_let p (e, t) k = (* letを挿入する補助関数 (caml2html: knormal_insert)
 
 let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
 (* 
-    与えられた式sを型環境envの下で, K正規化を行なってK正規化後のデータ型に変換する.
+    与えられた式sを変数環境envの下で, K正規化を行なってK正規化後のデータ型に変換する.
 
     Args
         env : 
-          型環境
+          変数環境
         s : Syntax.t
           式
 
