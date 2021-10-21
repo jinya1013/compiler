@@ -433,4 +433,5 @@ and output_prog outchan (Prog (top, e)) =
   output_fundef_list outchan top 1;
   Id.output_tab2 outchan 0 (-1);
   output_string outchan "MAIN";
-  output_closure outchan e 1
+  output_closure outchan e 1;
+  output_string outchan "\n";

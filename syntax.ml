@@ -37,19 +37,19 @@ let top_pos:pos = 0
 
 let rec output_syntax outchan s depth = 
 (* 
-    与㝈られ㝟弝sをポャポルoutchan㝫出力㝙る.
+    �?????????????�?s????????��?????outchan?????��????????.
 
     Args
         outchan : out_channel
-          出力先㝮ポャンポル
+          ??��?????????????��?��?????
         s : Syntax.t
-          出力㝙る弝
+          ??��????????�?
         depth : int
-          構文解枝木㝮深㝕
+          �????解�????????深�??
 
     Returns
         retval : unit
-          㝪㝗            
+          ??????            
 
 *)
   match s with
@@ -265,7 +265,8 @@ and output_prog outchan s =
         retval : unit
           �ʤ�            
 *)
-  match s with
+  (
+    match s with
   | Unit(p)  -> 
   (
     output_string outchan ((string_of_int p) ^ "\t");
@@ -457,3 +458,5 @@ and output_prog outchan s =
     output_syntax outchan t2 1;
     output_syntax outchan t3 1;
   )
+  );
+  output_string outchan "\n";

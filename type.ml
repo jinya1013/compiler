@@ -32,7 +32,7 @@ let rec output_type outchan s =
   )
   | Array(t) ->
   (
-    output_string outchan "Fun( ";
+    output_string outchan "Array( ";
     output_type outchan t;
     output_string outchan " )"
   )

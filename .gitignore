@@ -85,3 +85,13 @@ _opam/
 # test/*
 # !test/*.ml
 # !test/*.c
+
+*.opa
+*.opc
+*.opi
+*.opk
+*.opp
+*.opr
+*.ops
+*.opt
+*.opv

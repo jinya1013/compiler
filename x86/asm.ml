@@ -381,4 +381,5 @@ and output_prog outchan (Prog(table, f, e)) =
   f;
   Id.output_tab2 outchan 0 (-1);
   output_string outchan "MAIN";
-  output_t outchan 1 e
+  output_t outchan 1 e;
+  output_string outchan "\n";
