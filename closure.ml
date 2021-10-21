@@ -147,21 +147,21 @@ let rec g env known = function (* クロージャ変換ルーチン本体 (caml2html: closure
       (* 関数定義let rec x y1 ... yn = e1 in e2の場合は、
          xに自由変数がない(closureを介さずdirectに呼び出せる)
          と仮定し、knownに追加してe1をクロージャ変換してみる *)
-      let toplevel_backup = !toplevel in
-      let env' = M.add x t env in
-      let known' = S.add x known in
-      let e1' = g (M.add_list yts env') known' e1 in
+      let toplevel_backup = !toplevel in (* 試しにクロージャ変換するので, ダメだったらやり直すためのバックアップ *)
+      let env' = M.add x t env in (* 変数xと型tの関係を環境に追加 *)
+      let known' = S.add x known in (* とりあえず、クロージャがないとわかっている関数の集合にxを追加する *)
+      let e1' = g (M.add_list yts env') known' e1 in (* 引数の集合を環境に加えた下で, e1'を評価する *)
       (* 本当に自由変数がなかったか、変換結果e1'を確認する *)
       (* 注意: e1'にx自身が変数として出現する場合はclosureが必要!
          (thanks to nuevo-namasute and azounoman; test/cls-bug2.ml参照) *)
-      let zs = S.diff (fv e1') (S.of_list (List.map fst yts)) in
+      let zs = S.diff (fv e1') (S.of_list (List.map fst yts)) in (* e1'の自由変数と関数の引数のdiffをとる *)
       let known', e1' =
-        if S.is_empty zs then known', e1' else
+        if S.is_empty zs then known', e1' else　(* 差分が空ならそのままでOK *)
         (* e1に自由変数が含まれるなら状態(toplevelの値)を戻して、クロージャ変換をやり直す *)
         (Format.eprintf "free variable(s) %s found in function %s@." (Id.pp_list (S.elements zs)) x;
          Format.eprintf "function %s cannot be directly applied in fact@." x;
-         toplevel := toplevel_backup;
-         let e1' = g (M.add_list yts env') known e1 in
+         toplevel := toplevel_backup; (* バックアップによって復元 *)
+         let e1' = g (M.add_list yts env') known e1 in (* 引数も環境に追加して, e1を評価 *)
          known, e1') in
       let zs = S.elements (S.diff (fv e1') (S.add x (S.of_list (List.map fst yts)))) in (* 自由変数のリスト *)
       let zts = List.map (fun z -> (z, M.find z env')) zs in (* ここで自由変数zの型を引くために引数envが必要 *)

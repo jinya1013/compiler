@@ -13,14 +13,12 @@ and exp =
   | SLL of Id.t * id_or_imm
   | Ld of Id.t * id_or_imm
   | St of Id.t * Id.t * id_or_imm
-  | FMovD of Id.t
-  | FNegD of Id.t
-  | FAddD of Id.t * Id.t
-  | FSubD of Id.t * Id.t
-  | FMulD of Id.t * Id.t
-  | FDivD of Id.t * Id.t
-  | LdDF of Id.t * id_or_imm
-  | StDF of Id.t * Id.t * id_or_imm
+  | FMov of Id.t
+  | FNeg of Id.t
+  | FAdd of Id.t * Id.t
+  | FSub of Id.t * Id.t
+  | FMul of Id.t * Id.t
+  | FDiv of Id.t * Id.t
   | Comment of string
   (* virtual instructions *)
   | IfEq of Id.t * id_or_imm * t * t
@@ -37,7 +35,7 @@ type fundef = { name : Id.l; args : Id.t list; fargs : Id.t list; body : t; ret 
 type prog = Prog of (Id.l * float) list * fundef list * t
 
 val fletd : Id.t * exp * t * Syntax.pos-> t (* shorthand of Let for float *)
-val seq : exp * t * Syntax.pos -> t (* shorthand of Let for unit *)
+val seq : exp * t * Syntax.pos-> t (* shorthand of Let for unit *)
 
 val regs : Id.t array
 val fregs : Id.t array

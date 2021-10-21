@@ -10,16 +10,17 @@ and exp =
   | Neg of Id.t
   | Add of Id.t * id_or_imm
   | Sub of Id.t * id_or_imm
-  | Ld of Id.t * id_or_imm * int
-  | St of Id.t * Id.t * id_or_imm * int
+  | SLL of Id.t * id_or_imm
+  | Ld of Id.t * id_or_imm
+  | St of Id.t * Id.t * id_or_imm
   | FMovD of Id.t
   | FNegD of Id.t
   | FAddD of Id.t * Id.t
   | FSubD of Id.t * Id.t
   | FMulD of Id.t * Id.t
   | FDivD of Id.t * Id.t
-  | LdDF of Id.t * id_or_imm * int
-  | StDF of Id.t * Id.t * id_or_imm * int
+  | LdDF of Id.t * id_or_imm
+  | StDF of Id.t * Id.t * id_or_imm
   | Comment of string
   (* virtual instructions *)
   | IfEq of Id.t * id_or_imm * t * t
@@ -30,8 +31,8 @@ and exp =
   (* closure address, integer arguments, and float arguments *)
   | CallCls of Id.t * Id.t list * Id.t list
   | CallDir of Id.l * Id.t list * Id.t list
-  | Save of Id.t * Id.t (* ãƒ¬ã‚¸ã‚¹ã‚¿å¤‰æ•°ã®å€¤ã‚’ã‚¹ã‚¿ãƒƒã‚¯å¤‰æ•°ã¸ä¿å­˜ *)
-  | Restore of Id.t (* ã‚¹ã‚¿ãƒƒã‚¯å¤‰æ•°ã‹ã‚‰å€¤ã‚’å¾©å…ƒ *)
+  | Save of Id.t * Id.t (* ¥ì¥¸¥¹¥¿ÊÑ¿ô¤ÎÃÍ¤ò¥¹¥¿¥Ã¥¯ÊÑ¿ô¤ØÊİÂ¸ *)
+  | Restore of Id.t (* ¥¹¥¿¥Ã¥¯ÊÑ¿ô¤«¤éÃÍ¤òÉü¸µ *)
 type fundef = { name : Id.l; args : Id.t list; fargs : Id.t list; body : t; ret : Type.t }
 type prog = Prog of (Id.l * float) list * fundef list * t
 
@@ -43,14 +44,13 @@ val fregs : Id.t array
 val allregs : Id.t list
 val allfregs : Id.t list
 val reg_cl : Id.t
-(*
 val reg_sw : Id.t
 val reg_fsw : Id.t
 val reg_ra : Id.t
-*)
 val reg_hp : Id.t
 val reg_sp : Id.t
 val is_reg : Id.t -> bool
+val co_freg : Id.t -> Id.t
 
 val fv : t -> Id.t list
 val concat : t -> Id.t * Type.t -> t -> t
@@ -63,6 +63,3 @@ val output_t : out_channel -> int -> t -> unit
 val output_exp : out_channel -> int -> Syntax.pos -> exp -> unit
 val output_func : out_channel -> int -> fundef -> unit
 val output_prog : out_channel -> prog -> unit
-
-
-
