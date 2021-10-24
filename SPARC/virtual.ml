@@ -26,8 +26,8 @@ let expand xts ini addf addi =
     xts
     ini
     (fun (offset, acc) x ->
-      let offset = align offset in
-      (offset + 8, addf x offset acc))
+      (* let offset = align offset in *)
+      (offset + 4, addf x offset acc)) (* mincamlの小数は単精度で十分 *)
     (fun (offset, acc) x t ->
       (offset + 4, addi x t offset acc))
 
@@ -42,7 +42,7 @@ let rec g env = function (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
           l
         with Not_found ->
           let l = Id.L(Id.genid "l") in
-          data := (l, d) :: !data;
+          data := (l, d) :: !data; (* 新しい浮動小数のラベルを生成して辞書に追加 *)
           l in
       let x = Id.genid "l" in
       Let((x, Type.Int), SetL(l), Ans(LdDF(x, C(0)), p), p)
@@ -72,7 +72,7 @@ let rec g env = function (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
       (match M.find x env with
       | Type.Unit -> Ans(Nop, p)
       | Type.Float -> Ans(FMovD(x), p)
-      | _ -> Ans(Mov(x), p))
+      | _ -> Ans(Mov(x), p)) (* 多分Type.IntかType.Bool *)
   | Closure.MakeCls((x, t), { Closure.entry = l; Closure.actual_fv = ys }, e2, p) -> (* クロージャの生成 (caml2html: virtual_makecls) *)
       (* Closureのアドレスをセットしてから、自由変数の値をストア *)
       let e2' = g (M.add x t env) e2 in
@@ -83,7 +83,7 @@ let rec g env = function (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
           (fun y offset store_fv -> seq(StDF(y, x, C(offset)), store_fv, p))
           (fun y _ offset store_fv -> seq(St(y, x, C(offset)), store_fv, p)) in
       Let((x, t), Mov(reg_hp),
-          Let((reg_hp, Type.Int), Add(reg_hp, C(align offset)),
+          Let((reg_hp, Type.Int), Add(reg_hp, C(offset)),
               (let z = Id.genid "l" in
               Let((z, Type.Int), SetL(l),
                   (seq (St(z, x, C(0)), store_fv, p)), p)), p), p)
@@ -122,7 +122,7 @@ let rec g env = function (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
       (match M.find x env with
       | Type.Array(Type.Unit) -> Ans(Nop, p)
       | Type.Array(Type.Float) ->
-          Let((offset, Type.Int), SLL(y, C(3)),
+          Let((offset, Type.Int), SLL(y, C(2)),
               Ans(LdDF(x, V(offset)), p), p)
       | Type.Array(_) ->
           Let((offset, Type.Int), SLL(y, C(2)),
@@ -133,7 +133,7 @@ let rec g env = function (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
       (match M.find x env with
       | Type.Array(Type.Unit) -> Ans(Nop, p)
       | Type.Array(Type.Float) ->
-          Let((offset, Type.Int), SLL(y, C(3)),
+          Let((offset, Type.Int), SLL(y, C(2)),
               Ans(StDF(z, x, V(offset)), p), p)
       | Type.Array(_) ->
           Let((offset, Type.Int), SLL(y, C(2)),

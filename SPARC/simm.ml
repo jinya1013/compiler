@@ -2,12 +2,12 @@ open Asm
 
 let rec g env = function (* 命令列の13bit即値最適化 (caml2html: simm13_g) *)
   | Ans(exp, p) -> Ans(g' env exp, p)
-  | Let((x, t), Set(i), e, p) when -4096 <= i && i < 4096 ->
+  | Let((x, t), Set(i), e, p) when -4096 <= i && i < 4096 ->  (* レジスタxに整数iをセットする命令 *)
       (* Format.eprintf "found simm13 %s = %d@." x i; *)
-      let e' = g (M.add x i env) e in
+      let e' = g (M.add x i env) e in (* xとiの対応関係を加えた環境で, envを評価 *)
       if List.mem x (fv e') then Let((x, t), Set(i), e', p) else
       ((* Format.eprintf "erased redundant Set to %s@." x; *)
-       e')
+       e') (* 最終的にe'中の全てのxが置き換えられてしまったら, xへの即値代入もいらない *)
   | Let(xt, SLL(y, C(i)), e, p) when M.mem y env -> (* for array access *)
       (* Format.eprintf "erased redundant SLL on %s@." x; *)
       g env (Let(xt, Set((M.find y env) lsl i), e, p))

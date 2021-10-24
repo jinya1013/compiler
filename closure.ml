@@ -156,7 +156,7 @@ let rec g env known = function (* クロージャ変換ルーチン本体 (caml2html: closure
          (thanks to nuevo-namasute and azounoman; test/cls-bug2.ml参照) *)
       let zs = S.diff (fv e1') (S.of_list (List.map fst yts)) in (* e1'の自由変数と関数の引数のdiffをとる *)
       let known', e1' =
-        if S.is_empty zs then known', e1' else　(* 差分が空ならそのままでOK *)
+        if S.is_empty zs then known', e1' else (* 差分が空ならそのままでOK *)
         (* e1に自由変数が含まれるなら状態(toplevelの値)を戻して、クロージャ変換をやり直す *)
         (Format.eprintf "free variable(s) %s found in function %s@." (Id.pp_list (S.elements zs)) x;
          Format.eprintf "function %s cannot be directly applied in fact@." x;

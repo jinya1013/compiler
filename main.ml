@@ -29,7 +29,7 @@ let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana
       (let s = Simm.f
         (let v = Virtual.f
           (let c = Closure.f
-            (let i = iter !limit
+            (* (let i = iter !limit *)
               (let a = Alpha.f
                 (let abc = RmExp.f 
                   (let k = KNormal.f
@@ -41,7 +41,7 @@ let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana
                   in output_string outchank "AFTER KNORMAL\n"; KNormal.output_prog outchank k; k)
                 in output_string outchank "AFTER REMOVE_COMMON_EXP\n"; KNormal.output_prog outchank abc; abc)
               in output_string outchana "AFTER ALPHA_TRANSFORM\n"; KNormal.output_prog outchana a; a)
-            in output_string outchani "AFTER ITER\n"; KNormal.output_prog outchani i; i)
+            (* in output_string outchani "AFTER ITER\n"; KNormal.output_prog outchani i; i) *)
           in output_string outchanc "AFTER CLOSURE_TRANSFORM\n"; Closure.output_prog outchanc c; c)
         in output_string outchanv "AFTER VIRTUAL_TRANSFORM\n"; Asm.output_prog outchanv v; v)
       in output_string outchans "AFTER SIMM\n"; Asm.output_prog outchans s; s)
@@ -101,3 +101,18 @@ let file f output_flag = (* ?????��?��???????��?��????��????
     with e -> (close_in inchan; close_out outchan; raise e)
   )
 
+let () = (* ??????????????��?��????��?????�?�???????�?????????? (caml2html: main_entry) *)
+  let files = ref [] in
+  let output_flag = ref true in
+  Arg.parse
+    [
+      ("-inline", Arg.Int(fun i -> Inline.threshold := i), "maximum size of functions inlined");
+      ("-iter", Arg.Int(fun i -> limit := i), "maximum number of optimizations iterated");
+      ("-output", Arg.Unit(fun () -> output_flag := true), "whether output middle expression or not")
+    ]
+    (fun s -> files := !files @ [s])
+    ("Mitou Min-Caml Compiler (C) Eijiro Sumii\n" ^
+     Printf.sprintf "usage: %s [-inline m] [-iter n] ...filenames without \".ml\"..." Sys.argv.(0));
+  List.iter
+    (fun f -> ignore (file f output_flag))
+    !files

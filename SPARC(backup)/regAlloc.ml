@@ -44,10 +44,10 @@ let rec alloc dest cont regenv x t =
   assert (not (M.mem x regenv));
   let all =
     match t with
-    | Type.Unit -> ["%x0"] (* dummy *)
+    | Type.Unit -> ["%g0"] (* dummy *)
     | Type.Float -> allfregs
     | _ -> allregs in
-  if all = ["%x0"] then Alloc("%x0") else (* [XX] ad hoc optimization *)
+  if all = ["%g0"] then Alloc("%g0") else (* [XX] ad hoc optimization *)
   if is_reg x then Alloc(x) else
   let free = fv cont in
   try
@@ -106,7 +106,7 @@ let rec g dest cont regenv = function (* 命令列のレジスタ割り当て (caml2html: re
           let r = M.find y regenv1 in
           let (e2', regenv2) = g dest cont (add x r (M.remove y regenv1)) e in
           let save =
-            try Save(M.find y regenv, y) (* Save(a, b) 変数名bでレジスタaに格納されている変数をスタックに退避する? *)
+            try Save(M.find y regenv, y)
             with Not_found -> Nop in
           (seq(save, concat e1' (r, t) e2', p), regenv2)
       | Alloc(r) ->
