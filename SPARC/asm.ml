@@ -1,12 +1,11 @@
 (* SPARC assembly with a few virtual instructions *)
-
 type id_or_imm = V of Id.t | C of int
 type t = (* 命令の列 (caml2html: sparcasm_t) *)
 | Ans of exp * Syntax.pos
 | Let of (Id.t * Type.t) * exp * t * Syntax.pos
 and exp = (* 一つ一つの命令に対応する式 (caml2html: sparcasm_exp) *)
   | Nop
-  | Set of int
+  | Set of int (* 即値を指定のレジスタに格納する命令 *)
   | SetL of Id.l
   | Mov of Id.t
   | Neg of Id.t
@@ -54,7 +53,13 @@ let regs = (* Array.init 16 (fun i -> Printf.sprintf "%%r%d" i) *)
      "%x28"; "%x29"; "%x30"; "%x31"
   |]
 (* 関数呼び出し時は, クロージャのアドレスをx6に, 引数をx7, x8, に, 戻り番地をx1に入れる *)
-let fregs = Array.init 16 (fun i -> Printf.sprintf "%%f%d" (i * 2))
+let fregs = [| 
+     "f0"; "%f1"; "%f2"; "%f3"; "%f4"; "%f5"; "%f6"; "%f7"; 
+     "%f8"; "%f9"; "%f10"; "%f11"; "%f12"; "%f13";
+     "%f14"; "%f15"; "%f16"; "%f17"; "%f18"; "%f19"; "%f20";
+     "%f21"; "%f22"; "%f23"; "%f24"; "%f25"; "%f26"; "%f27";
+     "%f28"; "%f29"; "%f30"
+  |]
 let allregs = Array.to_list regs
 let allfregs = Array.to_list fregs
 let reg_cl = "%x4" (* closure address (caml2html: sparcasm_regcl) *)
@@ -64,7 +69,8 @@ let reg_sp = "%x2" (* stack pointer *)
 let reg_hp = "%x3" (* heap pointer (caml2html: sparcasm_reghp) *)
 let reg_ra = "%x1" (* return address *)
 let is_reg x = (x.[0] = '%')
-let co_freg_table =
+
+(* let co_freg_table =
   let ht = Hashtbl.create 16 in
   for i = 0 to 15 do
     Hashtbl.add
@@ -73,16 +79,16 @@ let co_freg_table =
       (Printf.sprintf "%%f%d" (i * 2 + 1))
   done;
   ht
-let co_freg freg = Hashtbl.find co_freg_table freg (* "companion" freg *)
+let co_freg freg = Hashtbl.find co_freg_table freg "companion" freg *)
 
 (* super-tenuki *)
-let rec remove_and_uniq xs = function
+let rec remove_and_uniq xs = function (* リストysの要素からダブりを無くして, 集合xsに格納する *)
   | [] -> []
   | x :: ys when S.mem x xs -> remove_and_uniq xs ys
   | x :: ys -> x :: remove_and_uniq (S.add x xs) ys
 
 (* free variables in the order of use (for spilling) (caml2html: sparcasm_fv) *)
-let fv_id_or_imm = function V(x) -> [x] | _ -> []
+let fv_id_or_imm = function V(x) -> [x] | _ -> [] (* データ型id_or_immに含まれる自由変数の集合を返す関数. id.t型なら, その値だけからなるリスト, 即値なら空リストを返す. *)
 let rec fv_exp = function
   | Nop | Set(_) | SetL(_) | Comment(_) | Restore(_) -> []
   | Mov(x) | Neg(x) | FMovD(x) | FNegD(x) | Save(x, _) -> [x]
@@ -105,6 +111,7 @@ let rec concat e1 xt e2 =
   | Ans(exp, p) -> Let(xt, exp, e2, p)
   | Let(yt, exp, e1', p) -> Let(yt, exp, concat e1' xt e2, p)
 
+(* iを無理やり8の倍数にする *)
 let align i = (if i mod 8 = 0 then i else i + 4)
 
 let rec output_id_or_imm outchan = function

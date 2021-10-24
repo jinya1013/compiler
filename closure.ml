@@ -23,7 +23,7 @@ type t = (* クロージャ変換後の式 (caml2html: closure_t) *)
   | Get of Id.t * Id.t * Syntax.pos
   | Put of Id.t * Id.t * Id.t * Syntax.pos
   | ExtArray of Id.l * Syntax.pos
-type fundef = { name : Id.l * Type.t;
+type fundef = { name : Id.l * Type.t; (* 多分これはシンプルに関数の型 *)
                 args : (Id.t * Type.t) list;
                 formal_fv : (Id.t * Type.t) list;
                 body : t }

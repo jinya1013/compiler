@@ -1,5 +1,4 @@
 (* translation into SPARC assembly with infinite number of virtual registers *)
-
 open Asm
 
 let data = ref [] (* 浮動小数点数の定数テーブル (caml2html: virtual_data) *)
@@ -8,7 +7,7 @@ let classify xts ini addf addi =
   List.fold_left
     (fun acc (x, t) ->
       match t with
-      | Type.Unit -> acc
+      | Type.Unit -> acc (* Unit型の場合は何もしない *)
       | Type.Float -> addf acc x
       | _ -> addi acc x t)
     ini
@@ -122,7 +121,7 @@ let rec g env = function (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
       (match M.find x env with
       | Type.Array(Type.Unit) -> Ans(Nop, p)
       | Type.Array(Type.Float) ->
-          Let((offset, Type.Int), SLL(y, C(2)),
+          Let((offset, Type.Int), SLL(y, C(2)), (* offset = y * 4 とする *)
               Ans(LdDF(x, V(offset)), p), p)
       | Type.Array(_) ->
           Let((offset, Type.Int), SLL(y, C(2)),
@@ -143,13 +142,16 @@ let rec g env = function (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
 
 (* 関数の仮想マシンコード生成 (caml2html: virtual_h) *)
 let h { Closure.name = (Id.L(x), t); Closure.args = yts; Closure.formal_fv = zts; Closure.body = e } =
-  let p = Closure.pos_of_t e in
-  let (int, float) = separate yts in
+  let p = Closure.pos_of_t e in (* 関数のボディ部分が元々のコードのどの部分に対応するか *)
+  let (int, float) = separate yts in (* 関数の引数を型に応じてintとfloatに分割する *)
+
+  (* クロージャから関数名や引数, 自由変数をレジスタに写す. *)
   let (offset, load) =
     expand
-      zts
-      (4, g (M.add x t (M.add_list yts (M.add_list zts M.empty))) e)
+      zts (* クロージャ中の自由変数の集合の, (変数名, 型)のリストに対して *)
+      (4, g (M.add x t (M.add_list yts (M.add_list zts M.empty))) e) (* (4, [(x, t);(y1, t1); ...;(yn, tn);(z1, t1); ...(zn, tn)]) *)
       (fun z offset load -> fletd(z, LdDF(x, C(offset)), load, p))
+      (* -> Let((z, Type.Float), LdDF(x, C(offset)), load, p) *)
       (fun z t offset load -> Let((z, t), Ld(x, C(offset)), load, p)) in
   match t with
   | Type.Fun(_, t2) ->
@@ -159,6 +161,6 @@ let h { Closure.name = (Id.L(x), t); Closure.args = yts; Closure.formal_fv = zts
 (* プログラム全体の仮想マシンコード生成 (caml2html: virtual_f) *)
 let f (Closure.Prog(fundefs, e)) =
   data := [];
-  let fundefs = List.map h fundefs in
-  let e = g M.empty e in
+  let fundefs = List.map h fundefs in (* fundefを変換 *)
+  let e = g M.empty e in (* 式の本体を変換 *)
   Prog(!data, fundefs, e)

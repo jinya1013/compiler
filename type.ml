@@ -19,7 +19,6 @@ let rec output_type outchan s =
   | Fun(ts, t) -> 
   (
     List.iter (fun t -> output_type outchan t; output_string outchan " -> ") ts;
-    output_string outchan " ->  ";
     output_type outchan t;
   )
   | Tuple(ts) -> 
