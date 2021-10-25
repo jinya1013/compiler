@@ -63,7 +63,7 @@ let rec check_same_exp (t1: KNormal.t) (t2: KNormal.t) =
   | FSub(a1,a2,_),FSub(b1,b2,_) -> (a1 = b1) && (a2 = b2)
   | FMul(a1,a2,_),FMul(b1,b2,_) -> (a1 = b1) && (a2 = b2)
   | FDiv (a1, a2, _),FDiv(b1, b2, _) -> (a1 = b1) && (a2 = b2)
-  | IfEq(a1,a2,t1,t2,_),IfEq(b1,b2,s1,s2,_) -> (a1 = b1)
+  | IfEq(a1,a2,t1,t2,_),IfEq(b1,b2,s1,s2,_) -> (a1 = b1) && (a2 = b2) && (check_same_exp t1 s1) && (check_same_exp t2 s2)
   | IfLE(a1, a2, t1, t2, _), IfLE(b1, b2, s1, s2, _) -> (a1 = b1) && (a2 == b2) && (check_same_exp t1 s1) && (check_same_exp t2 s2)
   | Let((a1,a2),t1,t2,_),Let((b1,b2),s1,s2,_) -> 
     if ((a2 = b2) && (check_same_exp (g t1 empty_env) (g s1 empty_env))) then 
