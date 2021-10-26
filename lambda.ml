@@ -39,6 +39,8 @@ and fundef = { name : Id.t * Type.t; args : (Id.t * Type.t) list; body : t } *)
 
 open KNormal
 
+exception Error of t
+
 let sbst_id (x : Id.t) (new_x : Id.t) (a : Id.t) = 
   if x = a then new_x else a
 
@@ -87,7 +89,7 @@ let rec g1 env = function (* 関数定義の中の自由変数を引数に加え
 | LetTuple(xts, e1, e2, p) -> LetTuple(xts, e1, g1 (xts @ env) e2, p)
 | LetRec({ name = (x, t); args = yts; body = e1 }, e2, p) ->
 (
-  let e1' = g1 (yts @ ((x, t) :: env)) e1 in
+  let e1' = g1 (yts @ env) e1 in
   let fv = fv e1' in (* 変換後のe1の中の自由変数の集合 *)
   let new_args = List.filter (fun (x, t) -> S.mem x fv) env in (* 環境に登録されている自由変数は新たに引数に追加 *)
   let extra_args = List.map (fun (_, t) -> (Id.genid "lambda", t)) new_args in
@@ -139,7 +141,12 @@ let rec g2 = function
   let (lifted_funcs, e1') = h2 [] (g2 e1) in
   List.fold_left 
   (
-    fun e1 (LetRec({ name = (x2, t2); args = yts2; body = e2 }, f2, p2)) -> LetRec({ name = (x2, t2); args = yts2; body = e2 }, e1, p2)
+    fun e1 f ->
+    (
+      match f with
+      | LetRec({ name = (x2, t2); args = yts2; body = e2 }, f2, p2) -> LetRec({ name = (x2, t2); args = yts2; body = e2 }, e1, p2)
+      | _ -> raise (Error(f))
+    ) 
   ) (LetRec({ name = (x, t); args = yts; body = e1' }, (g2 e2), p)) lifted_funcs
 
 )
