@@ -153,7 +153,15 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
 
   | Tail, IfEq(x, y', e1, e2) ->
       let b_else = Id.genid ("beq_else") in
-      Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x (pp_id_or_imm y') b_else p;
+      (
+        match y' with
+        | V(y) -> Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x y b_else p; (* (x - 1 < y　なら飛ぶ) *)
+        | C(i) -> 
+        (
+          Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
+          Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x reg_sw b_else p
+        )
+      );
       Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (Tail, e1);
@@ -161,9 +169,17 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       stackset := stackset_back;
       g oc (Tail, e2)
   | Tail, IfLE(x, y', e1, e2) ->
-      let b = Id.genid ("ble") in
+      let b = Id.genid ("blt") in
       Printf.fprintf oc "\taddi\t%s %s -1\t# %d \n" x x p;
-      Printf.fprintf oc "\tble\t%s %s %s\t# %d \n" x (pp_id_or_imm y') b p; (* (x - 1 < y　なら飛ぶ) *)
+      (
+        match y' with
+        | V(y) -> Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x y b p; (* (x - 1 < y　なら飛ぶ) *)
+        | C(i) -> 
+        (
+          Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
+          Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x reg_sw b p
+        )
+      );
       Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       Printf.fprintf oc "\taddi\t%s %s 1\t# %d \n" x x p;
@@ -174,7 +190,15 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       g oc (Tail, e1)
   | Tail, IfGE(x, y', e1, e2) ->
       let b_else = Id.genid ("bge_else") in
-      Printf.fprintf oc "\tble\t%s %s %s\t# %d \n" x (pp_id_or_imm y') b_else p;
+      (
+        match y' with
+        | V(y) -> Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x y b_else p; (* (x - 1 < y　なら飛ぶ) *)
+        | C(i) -> 
+        (
+          Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
+          Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x reg_sw b_else p
+        )
+      );
       Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (Tail, e1);
@@ -194,19 +218,26 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       g oc (Tail, e1)
   | Tail, IfFLE(x, y, e1, e2) ->
       let b = Id.genid ("fblt") in
-      Printf.fprintf oc "\tfble\t%s %s %s\t# %d \n" x y b p;
+      Printf.fprintf oc "\tfblt\t%s %s %s\t# %d \n" x y b p;
       Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (Tail, e2);
       Printf.fprintf oc "%s:\t# %d \n" b p;
       stackset := stackset_back;
       g oc (Tail, e1)
-
   | NonTail(z), IfEq(x, y', e1, e2) ->
       let b_else = Id.genid ("beq_else") in
       let b_cont = Id.genid ("beq_cont") in
       let dest = NonTail(z) in
-      Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x (pp_id_or_imm y') b_else p;
+      (
+        match y' with
+        | V(y) -> Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x y b_else p; (* (x - 1 < y　なら飛ぶ) *)
+        | C(i) -> 
+        (
+          Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
+          Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x reg_sw b_else p
+        )
+      );
       Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (dest, e1);
@@ -220,11 +251,19 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       let stackset2 = !stackset in
       stackset := S.inter stackset1 stackset2
   | NonTail(z), IfLE(x, y', e1, e2) ->
-      let b = Id.genid ("ble") in
-      let b_cont = Id.genid ("ble_cont") in
+      let b = Id.genid ("blt") in
+      let b_cont = Id.genid ("blt_cont") in
       let dest = NonTail(z) in
       Printf.fprintf oc "\taddi\t%s %s -1\t# %d \n" x x p;
-      Printf.fprintf oc "\tble\t%s %s %s\t# %d \n" x (pp_id_or_imm y') b p; (* (x - 1 < y　なら飛ぶ) *)
+      (
+        match y' with
+        | V(y) -> Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x y b p; (* (x - 1 < y　なら飛ぶ) *)
+        | C(i) -> 
+        (
+          Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
+          Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x reg_sw b p
+        )
+      );
       Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       Printf.fprintf oc "\taddi\t%s %s 1\t# %d \n" x x p;
@@ -243,7 +282,15 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       let b_else = Id.genid ("beq_else") in
       let b_cont = Id.genid ("beq_cont") in
       let dest = NonTail(z) in
-      Printf.fprintf oc "\tble\t%s %s %s\t# %d \n" x (pp_id_or_imm y') b_else p;
+      (
+        match y' with
+        | V(y) -> Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x y b_else p; (* (x - 1 < y　なら飛ぶ) *)
+        | C(i) -> 
+        (
+          Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
+          Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x reg_sw b_else p
+        )
+      );
       Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (dest, e1);
@@ -275,10 +322,10 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       let stackset2 = !stackset in
       stackset := S.inter stackset1 stackset2
   | NonTail(z), IfFLE(x, y, e1, e2) ->
-      let b = Id.genid ("fble") in
-      let b_cont = Id.genid ("fble_cont") in
+      let b = Id.genid ("fblt") in
+      let b_cont = Id.genid ("fblt_cont") in
       let dest = NonTail(z) in
-      Printf.fprintf oc "\tfble\t%s %s %s\t# %d \n" x y b p;
+      Printf.fprintf oc "\tfblt\t%s %s %s\t# %d \n" x y b p;
       Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (dest, e2);
