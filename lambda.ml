@@ -89,7 +89,7 @@ let rec g1 env = function (* 関数定義の中の自由変数を引数に加え
 | LetTuple(xts, e1, e2, p) -> LetTuple(xts, e1, g1 (xts @ env) e2, p)
 | LetRec({ name = (x, t); args = yts; body = e1 }, e2, p) ->
 (
-  let e1' = g1 (yts @ env) e1 in
+  let e1' = g1 (yts @ ((x, t) :: env)) e1 in
   let fv = fv e1' in (* 変換後のe1の中の自由変数の集合 *)
   let new_args = List.filter (fun (x, t) -> S.mem x fv) env in (* 環境に登録されている自由変数は新たに引数に追加 *)
   let extra_args = List.map (fun (_, t) -> (Id.genid "lambda", t)) new_args in
