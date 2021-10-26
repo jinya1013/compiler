@@ -75,7 +75,7 @@ let output_id_list outchan is =
       output_string outchan ", ";
       output_id outchan i in
     output_id outchan (List.hd is);
-    List.iter f is
+    List.iter f (List.tl is)
   )
 
 let output_label outchan = function

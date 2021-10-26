@@ -30,7 +30,7 @@ let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana
         (let v = Virtual.f
           (let c = Closure.f
             (let i = iter !limit
-                (let abc = RmExp.f 
+              (let lam = Lambda.f 
                 (let a = Alpha.f
                   (let k = KNormal.f
                     (let t = Typing.f
@@ -39,8 +39,8 @@ let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana
                       )
                     in output_string outchant "AFTER TYPING\n"; Syntax.output_prog outchant t; t)
                   in output_string outchank "AFTER KNORMAL\n"; KNormal.output_prog outchank k; k)
-                in output_string outchank "AFTER ALPHA_TRANSFORM\n"; KNormal.output_prog outchank a; a)
-              in output_string outchana "AFTER REMOVE_COMMON_EXP\n"; KNormal.output_prog outchana abc; abc)
+                in output_string outchana "AFTER ALPHA_TRANSFORM\n"; KNormal.output_prog outchana a; a)
+              in output_string outchank "AFTER LAMBDA\n"; KNormal.output_prog outchank lam; lam)
             in output_string outchani "AFTER ITER\n"; KNormal.output_prog outchani i; i)
           in output_string outchanc "AFTER CLOSURE_TRANSFORM\n"; Closure.output_prog outchanc c; c)
         in output_string outchanv "AFTER VIRTUAL_TRANSFORM\n"; Asm.output_prog outchanv v; v)
