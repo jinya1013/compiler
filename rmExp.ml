@@ -1,6 +1,5 @@
 open KNormal
 
-
 let empty_env = []
 let add_env env (xt:(Id.t * Type.t)) (exp:KNormal.t)  = (xt,exp)::env
 

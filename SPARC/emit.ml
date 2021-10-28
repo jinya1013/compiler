@@ -127,15 +127,15 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   (* 末尾だったら計算結果を第一レジスタにセットしてリターン (caml2html: emit_tailret) *) (* 返り値がない命令 *)
   | Tail, (Nop | St _ | StDF _ | Comment _ | Save _ as exp) ->
       g' p oc (NonTail(Id.gentmp Type.Unit), exp);
-      Printf.fprintf oc "\tjr\t%%x1\t# %d \n" p;
+      Printf.fprintf oc "\tjr\t0(%%x1)\t# %d \n" p;
       Printf.fprintf oc "\tnop\t# %d \n" p
   | Tail, (Set _ | SetL _ | Mov _ | Neg _ | Add _ | Sub _ | SLL _ | Ld _ as exp) ->
       g' p oc (NonTail(regs.(0)), exp);
-      Printf.fprintf oc "\tjr\t%%x1\t# %d \n" p;
+      Printf.fprintf oc "\tjr\t0(%%x1)\t# %d \n" p;
       Printf.fprintf oc "\tnop\t# %d \n" p
   | Tail, (FMovD _ | FNegD _ | FAddD _ | FSubD _ | FMulD _ | FDivD _ | LdDF _ as exp) ->
       g' p oc (NonTail(fregs.(0)), exp);
-      Printf.fprintf oc "\tjr\t%%x1\t# %d \n" p;
+      Printf.fprintf oc "\tjr\t0(%%x1)\t# %d \n" p;
       Printf.fprintf oc "\tnop\t# %d \n" p
 
 
@@ -148,7 +148,7 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
         | _ -> assert false
       );
 
-      Printf.fprintf oc "\tjr\t%%x1\t# %d \n" p;
+      Printf.fprintf oc "\tjr\t0(%%x1)\t# %d \n" p;
       Printf.fprintf oc "\tnop\t# %d \n" p
 
   | Tail, IfEq(x, y', e1, e2) ->
@@ -343,7 +343,7 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   | Tail, CallCls(x, ys, zs) -> (* 末尾呼び出し (caml2html: emit_tailcall) *) (* x : 関数の名前, ys : 整数引数, zs : 浮動小数引数 *)
       g'_args oc [(x, reg_cl)] ys zs p;
       Printf.fprintf oc "\tlw\t%s 0(%s)\t# %d \n" reg_sw reg_cl p; (* クロージャレジスタが指すクロージャ先頭のアドレスをスワップレジスタに移動させる *)
-      Printf.fprintf oc "\tjr\t%s\t# %d \n" reg_sw p;
+      Printf.fprintf oc "\tjr\t0(%s)\t# %d \n" reg_sw p;
       Printf.fprintf oc "\tnop\t# %d \n" p
   | Tail, CallDir(Id.L(x), ys, zs) -> (* 末尾呼び出し *)
       g'_args oc [] ys zs p;
@@ -356,7 +356,7 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       Printf.fprintf oc "\tlw\t%s 0(%s)\t# %d \n" reg_sw reg_cl p;
     (* よくわからない *)
       Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" reg_sp reg_sp ss p; (* レジスタ溢れによって退避する分だけスタックを拡張しておく *)
-      Printf.fprintf oc "\tjalr\t%s\t# %d \n" reg_sw p;
+      Printf.fprintf oc "\tjalr\t%%x1 %s\t# %d \n" reg_sw p;
       Printf.fprintf oc "\taddi\t%s %s -%d\t# %d \n" reg_sp reg_sp ss p; (* 拡張した分を戻す *)
 
       Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" reg_ra (ss - 4) reg_sp p;  (* リターンアドレスの復帰 *)
@@ -375,7 +375,7 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
     (* よくわからない *)
       Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" reg_sp reg_sp ss p;
 
-      Printf.fprintf oc "\tjal\t%s\t# %d \n" x p;
+      Printf.fprintf oc "\tjal\t %%x1 %s\t# %d \n" x p;
 
       Printf.fprintf oc "\taddi\t%s %s -%d\t# %d \n" reg_sp reg_sp ss p;
 
@@ -421,21 +421,14 @@ let h oc { name = Id.L(x); args = _; fargs = _; body = e; ret = _ } =
 
 let f oc (Prog(data, fundefs, e)) =
   Format.eprintf "generating assembly...@.";
-  Printf.fprintf oc ".section\t\".rodata\"\n";
-  Printf.fprintf oc ".align\t8\n";
   List.iter
     (fun (Id.L(x), d) ->
       Printf.fprintf oc "%s:\t! %f\n" x d;
       Printf.fprintf oc "\t.long\t0x%lx\n" (gethi d);
       Printf.fprintf oc "\t.long\t0x%lx\n" (getlo d))
     data;
-  Printf.fprintf oc ".section\t\".text\"\n";
   List.iter (fun fundef -> h oc fundef) fundefs;
-  Printf.fprintf oc ".global\tmin_caml_start\n";
   Printf.fprintf oc "min_caml_start:\n";
-  (* Printf.fprintf oc "\tsave\t%%sp, -112, %%sp\n"; from gcc; why 112? *)
   stackset := S.empty;
   stackmap := [];
   g oc (NonTail("%%x0"), e);
-  (* Printf.fprintf oc "\tret\n"; *)
-  (* Printf.fprintf oc "\trestore\n" *)
