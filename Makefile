@@ -29,7 +29,8 @@ simm.mli simm.ml regAlloc.mli regAlloc.ml emit.mli emit.ml \
 main.mli main.ml 
 
 # ↓テストプログラムが増えたら、これも増やす
-TESTS = print for_lambda sum-tail gcd sum fib ack even-odd \
+TESTS = print for_lambda \
+sum-tail gcd sum fib ack even-odd \
 adder funcomp cls-rec cls-bug cls-bug2 cls-reg-bug \
 shuffle spill spill2 spill3 join-stack join-stack2 join-stack3 \
 join-reg join-reg2 non-tail-if non-tail-if2 \

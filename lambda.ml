@@ -68,7 +68,7 @@ let rec sbst_var_name x new_x = function
   | Let((a1, a2), e1, e2, p) ->  Let((a1, a2), sbst_var_name x new_x e1, sbst_var_name x new_x e2, p)
   | (_ as exp) -> exp
 
-let rec h1 fname new_args = function
+let rec h1 fname new_args = function (* g1から呼び出され, 関数fname の関数適用があったら, それにnew_argsを付け加える関数 *)
 | Unit(_) | Int(_) | Float(_) | Neg(_) | Add(_) | Sub(_) | FNeg(_) | FAdd(_) | FSub(_) | FMul(_) | FDiv(_) | Var(_) | Tuple(_)
 | Get(_) | Put(_) | ExtArray(_) | ExtFunApp (_) as exp -> exp
 | Let((x, t), e1, e2, p) -> Let((x, t), (h1 fname new_args e1), (h1 fname new_args e2), p)
@@ -89,12 +89,12 @@ let rec g1 env = function (* 関数定義の中の自由変数を引数に加え
 | LetTuple(xts, e1, e2, p) -> LetTuple(xts, e1, g1 (xts @ env) e2, p)
 | LetRec({ name = (x, t); args = yts; body = e1 }, e2, p) ->
 (
-  let e1' = g1 (yts @ ((x, t) :: env)) e1 in
+  let e1' = g1 (yts @ ((x, t) :: env)) e1 in (* e1をlambda-liftingした結果 *)
   let fv = fv e1' in (* 変換後のe1の中の自由変数の集合 *)
-  let new_args = List.filter (fun (x, t) -> S.mem x fv) env in (* 環境に登録されている自由変数は新たに引数に追加 *)
-  let extra_args = List.map (fun (_, t) -> (Id.genid "lambda", t)) new_args in
-  let e1'' = List.fold_left2 (fun e x new_x -> sbst_var_name x new_x e) e1' (fst (List.split new_args)) (fst (List.split extra_args)) in
-  let e2' = g1 ((x, t) :: env) (h1 x new_args e2) in
+  let new_args = List.filter (fun (x, t) -> S.mem x fv) env in (* 環境に登録されているe1中の自由変数は新たに関数の引数に追加 *)
+  let extra_args = List.map (fun (_, t) -> (Id.genid "lambda", t)) new_args in (* 関数の引数用に新たな変数を作る *)
+  let e1'' = List.fold_left2 (fun e x new_x -> sbst_var_name x new_x e) e1' (List.map fst new_args) (List.map fst extra_args) in (* e1'の中に現れる自由変数を, 新たに関数の引数として追加した変数で置き換える *)
+  let e2' = g1 ((x, t) :: env) (h1 x new_args e2) in (* e2中に現れるxの関数適用において, 全てnew_argsを付け加えたものを再度lambda-lifting *)
   LetRec({ name = (x, t); args = yts @ extra_args; body = e1'' }, e2', p)
 )
 | IfEq(x, y, e1, e2, p) -> IfEq(x, y, g1 env e1, g1 env e2, p) 
