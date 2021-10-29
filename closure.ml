@@ -144,7 +144,7 @@ let rec g env known = function (* クロージャ変換ルーチン本体 (caml2html: closure
   | KNormal.Let((x, t), e1, e2, p) -> Let((x, t), g env known e1, g (M.add x t env) known e2, p)
   | KNormal.Var(x, p) -> Var(x, p)
   | KNormal.LetRec({ KNormal.name = (x, t); KNormal.args = yts; KNormal.body = e1 }, e2, p) as exp -> (* 関数定義の場合 (caml2html: closure_letrec) *)
-      (* 関数定義let rec x y1 ... yn = e1 in e2の場合は、
+    ( (* 関数定義let rec x y1 ... yn = e1 in e2の場合は、
          xに自由変数がない(closureを介さずdirectに呼び出せる)
          と仮定し、knownに追加してe1をクロージャ変換してみる *)
       let toplevel_backup = !toplevel in (* バックアップ用のこの時点でのトップレベル関数の集合 *)
@@ -155,49 +155,75 @@ let rec g env known = function (* クロージャ変換ルーチン本体 (caml2html: closure
       (* 注意: e1'にx自身が変数として出現する場合はclosureが必要!
          (thanks to nuevo-namasute and azounoman; test/cls-bug2.ml参照) *)
       let zs = S.diff (fv e1') (S.of_list (List.map fst yts)) in (* 変換後のe1'の自由変数と, 関数の引数の差集合 *)
-      let (known', e1', e2, yts) =
-        if S.is_empty zs then known', e1', e2, yts else (* zsが空集合なら, e1のクロージャ変換はうまく行った(=関数を呼び出すときはAppDirで良さそう)ということ *)
-        (* e1に自由変数が含まれるなら状態(toplevelの値)を戻して, 次はlambda-ligtingに挑戦 *)
-        (
+      if S.is_empty zs then  (* zsが空集合なら, e1のクロージャ変換はうまく行った(=関数を呼び出すときはAppDirで良さそう)ということ *)
+        let zs = S.elements (S.diff (fv e1') (S.add x (S.of_list (List.map fst yts)))) in (* この時, 関数xは自由変数を持つが, e1'に含まれる自由変数と引数の差集合をとって自由変数の集合を作る *)
+        let zts = List.map (fun z -> (z, M.find z env')) zs in (* ここで自由変数zの型を引くために引数envが必要 *)
+        toplevel := { name = (Id.L(x), t); args = yts; formal_fv = zts; body = e1' } :: !toplevel; (* 何はともあれ, トップレベル関数を追加 *)
+        let e2' = g env' known' e2 in (* この環境のもとで, e2をクロージャ変換する *)
+        if S.mem x (fv e2') then (* xが変数としてe2'に出現するか *)
+          MakeCls((x, t), { entry = Id.L(x); actual_fv = zs }, e2', p) (* 出現していたらクロージャを作る *)
+        else
+          (Format.eprintf "eliminating closure(s) %s@." x;
+          e2') (* 出現しなければMakeClsを削除 *)
+      else ( (* 変換後のe1'に自由変数が残ってしまったら, lambda-liftingにトライ *)
           Format.eprintf "free variable(s) %s found in function %s@." (Id.pp_list (S.elements zs)) x;
-          Format.eprintf "function %s cannot be directly applied in fact@.Trying to lambda lifting..." x;
+          Format.eprintf "Trying to lambda lifting...\n";
           toplevel := toplevel_backup; (* トップレベル関数のバックアップを呼び出す *)
-          output_string stdout "BF\n";
-          KNormal.output_prog stdout exp;
-          output_string stdout "AF\n";
-          let KNormal.LetRec({ KNormal.name = (xl, tl); KNormal.args = ytsl; KNormal.body = e1l }, e2l, pl) as expl = Lambda.g1 (M.bindings env) exp in 
+          let KNormal.LetRec({ KNormal.name = (xl, tl); KNormal.args = ytsl; KNormal.body = e1l }, e2l, pl) as exp' = Lambda.g (M.bindings env) exp in 
           (* expをlambda-liftingして, 自由変数をなくそうとする *)
-          KNormal.output_prog stdout expl;
-          let e1' = g env known e1l in (* 今度こそ, 自由変数がないのではと, 再度クロージャ変換する *)
-          let zs = S.diff (fv e1') (S.of_list (List.map fst ytsl)) in (* 再度, 本当に自由変数がなかったかを確かめる *)
-          output_string stdout "free_variable\n";
-          List.iter (fun x -> Id.output_id stdout x) (S.elements zs);
-          let (known', e1', e2, yts) = 
-            if S.is_empty zs then (* 自由変数がなければ, クロージャ変換成功 *)
+          let e1l' = g (M.add_list ytsl env') known e1l in (* 再度クロージャ変換する *)
+          let zs = S.diff (fv e1l') (S.of_list (List.map fst ytsl)) in (* 再度, 本当に自由変数の有無を確かめる *)
+          if S.is_empty zs then(* 自由変数がなければ, クロージャ変換成功 *)
             (
-              Format.eprintf "\n\nLambda-lifting has successfully been done.";
-              known', e1', e2l, ytsl
+              Format.eprintf "*****************Lambda-lifting has successfully been done.\n";
+              let zs = S.elements (S.diff (fv e1l') (S.add x (S.of_list (List.map fst ytsl)))) in (* この時, 関数xは自由変数を持つが, e1'に含まれる自由変数と引数の差集合をとって自由変数の集合を作る *)
+              let zts = List.map (fun z -> (z, M.find z env')) zs in (* ここで自由変数zの型を引くために引数envが必要 *)
+              toplevel := { name = (Id.L(x), t); args = ytsl; formal_fv = zts; body = e1l' } :: !toplevel; (* 何はともあれ, トップレベル関数を追加 *)
+              let e2l' = g env' known' e2l in (* この環境のもとで, e2lをクロージャ変換する *)
+              if S.mem x (fv e2l') then (* xが変数としてe2l'に出現したら, クロージャ変換をやり直す. *)
+                (
+                  Format.eprintf "This function %s is used as a variable in the later expression.\n" x;
+                  Format.eprintf "function %s cannot be directly applied in fact@.It will be called by using closure.\n" x;
+                  toplevel := toplevel_backup;
+                  let e1' = g (M.add_list yts env') known e1 in (* それでも自由変数があれば, 大人しくクロージャ変換する *)
+                  let zs = S.elements (S.diff (fv e1') (S.add x (S.of_list (List.map fst yts)))) in (* この時, 関数xは自由変数を持つが, e1'に含まれる自由変数と引数の差集合をとって自由変数の集合を作る *)
+                  let zts = List.map (fun z -> (z, M.find z env')) zs in (* ここで自由変数zの型を引くために引数envが必要 *)
+                  toplevel := { name = (Id.L(x), t); args = yts; formal_fv = zts; body = e1' } :: !toplevel; (* 何はともあれ, トップレベル関数を追加 *)
+                  let e2' = g env' known e2 in (* この環境のもとで, e2をクロージャ変換する *)
+                  if S.mem x (fv e2') then (* xが変数としてe2'に出現するか *)
+                    MakeCls((x, t), { entry = Id.L(x); actual_fv = zs }, e2', p) (* 出現していたらクロージャを作る *)
+                  else
+                    (
+                      Format.eprintf "eliminating closure(s) %s@." x;
+                      e2'
+                    ) (* 出現しなければMakeClsを削除 *)
+                )
+              else
+              (
+                Format.eprintf "eliminating closure(s) %s@." x;
+                e2l'
+              ) (* 出現しなければMakeClsを削除 *)
             )
-              else (* それでもなお自由変数が消せないとき *)
+          else
             (
               Format.eprintf "free variable(s) %s still found in function %s@." (Id.pp_list (S.elements zs)) x;
               Format.eprintf "function %s cannot be directly applied in fact@.It will be called by using closure.\n" x;
               toplevel := toplevel_backup;
               let e1' = g (M.add_list yts env') known e1 in (* それでも自由変数があれば, 大人しくクロージャ変換する *)
-              known, e1', e2, yts
-            ) in
-            known', e1', e2, yts
-          ) in (* xを含まないknownと, クロージャ変換後のe1'と, クロージャ変換前のe2を返す *)
-      (* 次は, e2のクロージャ変換 *)
-      let zs = S.elements (S.diff (fv e1') (S.add x (S.of_list (List.map fst yts)))) in (* この時, 関数xは自由変数を持つが, e1'に含まれる自由変数と引数の差集合をとって自由変数の集合を作る *)
-      let zts = List.map (fun z -> (z, M.find z env')) zs in (* ここで自由変数zの型を引くために引数envが必要 *)
-      toplevel := { name = (Id.L(x), t); args = yts; formal_fv = zts; body = e1' } :: !toplevel; (* 何はともあれ, トップレベル関数を追加 *)
-      let e2' = g env' known' e2 in (* この環境のもとで, e2をクロージャ変換する *)
-      if S.mem x (fv e2') then (* xが変数としてe2'に出現するか *)
-        MakeCls((x, t), { entry = Id.L(x); actual_fv = zs }, e2', p) (* 出現していたらクロージャを作る *)
-      else
-        (Format.eprintf "eliminating closure(s) %s@." x;
-         e2') (* 出現しなければMakeClsを削除 *)
+              let zs = S.elements (S.diff (fv e1') (S.add x (S.of_list (List.map fst yts)))) in (* この時, 関数xは自由変数を持つが, e1'に含まれる自由変数と引数の差集合をとって自由変数の集合を作る *)
+              let zts = List.map (fun z -> (z, M.find z env')) zs in (* ここで自由変数zの型を引くために引数envが必要 *)
+              toplevel := { name = (Id.L(x), t); args = yts; formal_fv = zts; body = e1' } :: !toplevel; (* 何はともあれ, トップレベル関数を追加 *)
+              let e2' = g env' known e2 in (* この環境のもとで, e2をクロージャ変換する *)
+              if S.mem x (fv e2') then (* xが変数としてe2'に出現するか *)
+                MakeCls((x, t), { entry = Id.L(x); actual_fv = zs }, e2', p) (* 出現していたらクロージャを作る *)
+              else
+                (
+                  Format.eprintf "eliminating closure(s) %s@." x;
+                  e2'
+                ) (* 出現しなければMakeClsを削除 *)
+            )
+          )
+    )
   | KNormal.App(x, ys, p) when S.mem x known -> (* 関数適用の場合 (caml2html: closure_app) *)
       Format.eprintf "directly applying %s@." x;
       AppDir(Id.L(x), ys, p)
