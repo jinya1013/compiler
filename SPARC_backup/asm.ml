@@ -46,7 +46,7 @@ let pos_of_t  = function
 let fletd(x, e1, e2, p) = Let((x, Type.Float), e1, e2, p)
 let seq(e1, e2, p) = Let((Id.gentmp Type.Unit, Type.Unit), e1, e2, p)
 
-let regs = (* Array.init 16 (fun i -> Printf.sprintf "%%r%d" i) *)
+(* let regs = (* Array.init 16 (fun i -> Printf.sprintf "%%r%d" i) *)
   [| "%i2"; "%i3"; "%i4"; "%i5";
      "%l0"; "%l1"; "%l2"; "%l3"; "%l4"; "%l5"; "%l6"; "%l7";
      "%o0"; "%o1"; "%o2"; "%o3"; "%o4"; "%o5" |]
@@ -59,6 +59,32 @@ let reg_fsw = fregs.(Array.length fregs - 1) (* temporary for swap *)
 let reg_sp = "%i0" (* stack pointer *)
 let reg_hp = "%i1" (* heap pointer (caml2html: sparcasm_reghp) *)
 let reg_ra = "%o7" (* return address *)
+let is_reg x = (x.[0] = '%') *)
+
+
+let regs = (* Array.init 16 (fun i -> Printf.sprintf "%%r%d" i) *)
+  [| 
+     "%x6"; "%x7"; "%x8"; "%x9"; "%x10"; "%x11"; "%x12"; "%x13";
+     "%x14"; "%x15"; "%x16"; "%x17"; "%x18"; "%x19"; "%x20";
+     "%x21"; "%x22"; "%x23"; "%x24"; "%x25"; "%x26"; "%x27";
+     "%x28"; "%x29"; "%x30"; "%x31"; "%x4"; "%x5"
+  |]
+(* 関数呼び出し時は, クロージャのアドレスをx6に, 引数をx7, x8, に, 戻り番地をx1に入れる *)
+let fregs = [| 
+     "f0"; "%f1"; "%f2"; "%f3"; "%f4"; "%f5"; "%f6"; "%f7"; 
+     "%f8"; "%f9"; "%f10"; "%f11"; "%f12"; "%f13";
+     "%f14"; "%f15"; "%f16"; "%f17"; "%f18"; "%f19"; "%f20";
+     "%f21"; "%f22"; "%f23"; "%f24"; "%f25"; "%f26"; "%f27";
+     "%f28"; "%f29"; "%f30"; "%f31"
+  |]
+let allregs = Array.to_list regs
+let allfregs = Array.to_list fregs
+let reg_cl = "%x4" (* closure address (caml2html: sparcasm_regcl) *)
+let reg_sw = "%x5"(* temporary for swap *)
+let reg_fsw = "%f31" (* temporary for swap *)
+let reg_sp = "%x2" (* stack pointer *)
+let reg_hp = "%x3" (* heap pointer (caml2html: sparcasm_reghp) *)
+let reg_ra = "%x1" (* return address *)
 let is_reg x = (x.[0] = '%')
 let co_freg_table =
   let ht = Hashtbl.create 16 in

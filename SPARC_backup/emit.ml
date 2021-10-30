@@ -158,7 +158,7 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       g'_args oc [(x, reg_cl)] ys zs p;
       let ss = stacksize () in
       Printf.fprintf oc "\tst\t%s, [%s + %d]\t# %d \n" reg_ra reg_sp (ss - 4) p; (* リターンアドレスレジスタのデータをスタックの末尾に追加する *)
-      Printf.fprintf oc "\tld\t[%s + 0], %s\t# %d \n" reg_cl reg_sw p; 8 (* クロージャの先頭のデータをスワップレジスタに移動する *)
+      Printf.fprintf oc "\tld\t[%s + 0], %s\t# %d \n" reg_cl reg_sw p; (* クロージャの先頭のデータをスワップレジスタに移動する *)
       Printf.fprintf oc "\tcall\t%s\t# %d \n" reg_sw p;
       Printf.fprintf oc "\tadd\t%s, %d, %s\t! delay slot\t# %d \n" reg_sp ss reg_sp p;
       Printf.fprintf oc "\tsub\t%s, %d, %s\t# %d \n" reg_sp ss reg_sp p;
