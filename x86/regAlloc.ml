@@ -91,28 +91,29 @@ let rec alloc cont regenv x t prefer =
     Spill(y)
 
 (* auxiliary function for g and g'_and_restore *)
-let add x r regenv =
+let add x r regenv = (* ÊÑ¿ôx¤Î¥ì¥¸¥¹¥¿r¤Ø¤Î³ä¤êÅö¤Æ¤ò´Ä¶­¤ËÄÉ²Ã¤¹¤ë´Ø¿ô *)
   if is_reg x then (assert (x = r); regenv) else
   M.add x r regenv
 
 (* auxiliary functions for g' *)
 exception NoReg of Id.t * Type.t
-let find x t regenv =
+let find x t regenv = (* ·¿t¤ÎÊÑ¿ôx¤ËÂĞ±ş¤¹¤ë¥ì¥¸¥¹¥¿¤ò´Ä¶­¤«¤é¤Ò¤¯ *)
   if is_reg x then x else
   try M.find x regenv
   with Not_found -> raise (NoReg(x, t))
-let find' x' regenv =
+let find' x' regenv = (* ´Ä¶­¤òÊÑ¿ôÌ¾¤Ç°ú¤¯´Ø¿ô¤À¤¬, ¤³¤Á¤é¤ÏÂ¨ÃÍ¤Ç¥é¥Ã¥×¤µ¤ì¤Æ¤¤¤Æ¤âÎÉ¤¤ *)
   match x' with
   | V(x) -> V(find x Type.Int regenv)
   | c -> c
-
+(* dest: g¤Î¼Â¹Ô·ë²Ì¤ò³ÊÇ¼¤¹¤ë¥ì¥¸¥¹¥¿¤È¤½¤Î·¿¤ÎÁÈ, cont: ¤³¤ì¤«¤é¸å¤ËÍè¤ëÌ¿ÎáÎó(Let(x, e1, e2)¤Ë¤ª¤±¤ëe2 , regenv: ¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ¤Î´Ä¶­ *)
 let rec g dest cont regenv = function (* Ì¿ÎáÎó¤Î¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ (caml2html: regalloc_g) *)
-  | Ans(exp, p) -> g'_and_restore dest cont regenv exp p
-  | Let((x, t) as xt, exp, e, p) ->
+  | Ans(exp, p) -> (* Ì¿ÎáÎó¤¬, Ans¤À¤Ã¤¿¤é *)
+    g'_and_restore dest cont regenv exp p (* Ì¿Îá¤Î¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ *)
+  | Let((x, t) as xt, exp, e, p) -> (* Ì¿ÎáÎó¤¬, Let¤À¤Ã¤¿¤é *)
       assert (not (M.mem x regenv));
-      let cont' = concat e dest cont in
-      let (e1', regenv1) = g'_and_restore xt cont' regenv exp p in
-      let (_call, targets) = target x dest cont' in
+      let cont' = concat e dest cont in (* ¿·¤·¤¤ '¤³¤ì¤«¤éÍè¤ëÌ¿ÎáÎó' Let(dest, e, cont)¤òºî¤ë *)
+      let (e1', regenv1) = g'_and_restore xt cont' regenv exp p in (* Ì¿Îáexp¤Î¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ¤ò¤¹¤ë *)
+      let (_call, targets) = target x dest cont' in 
       let sources = source t e1' in
       (* ¥ì¥¸¥¹¥¿´Ö¤Îmov¤è¤ê¥á¥â¥ê¤ò²ğ¤¹¤ëswap¤Î¤Û¤¦¤¬ÌäÂê¤Ê¤Î¤Ç¡¢sources¤è¤êtargets¤òÍ¥Àè *)
       (match alloc cont' regenv1 x t (targets @ sources) with
@@ -127,13 +128,15 @@ let rec g dest cont regenv = function (* Ì¿ÎáÎó¤Î¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ (caml2html: re
           let (e2', regenv2) = g dest cont (add x r regenv1) e in
           (concat e1' (r, t) e2', regenv2))
 and g'_and_restore dest cont regenv exp p = (* »ÈÍÑ¤µ¤ì¤ëÊÑ¿ô¤ò¥¹¥¿¥Ã¥¯¤«¤é¥ì¥¸¥¹¥¿¤ØRestore (caml2html: regalloc_unspill) *)
-  try g' dest cont regenv p exp
-  with NoReg(x, t) ->
+  try g' dest cont regenv p exp (* g' dest cont regenv p exp ¤ò¹Ô¤ª¤¦¤¹¤ë *)
+  with NoReg(x, t) -> (* ¥ì¥¸¥¹¥¿¤¬¸«¤Ä¤«¤é¤Ê¤¤»ş¤Ï, ÊÑ¿ô¤ò¥¹¥¿¥Ã¥¯¤«¤é¥ì¥¸¥¹¥¿¤Ø¥ê¥¹¥È¥¢¤·¤Æ, ºÆÅÙÄ©Àï¤¹¤ë *)
     ((* Format.eprintf "restoring %s@." x; *)
-     g dest cont regenv (Let((x, t), Restore(x), Ans(exp, p), p)))
-and g' dest cont regenv p = function (* ³ÆÌ¿Îá¤Î¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ (caml2html: regalloc_gprime) *)
-  | Nop | Set _ | SetL _ | Comment _ | Restore _ as exp -> (Ans(exp, p), regenv)
-  | Mov(x) -> (Ans(Mov(find x Type.Int regenv), p), regenv)
+     g dest cont regenv (Let((x, t), Restore(x), Ans(exp, p), p))) (* x¤òRestore¤¹¤ëÌ¿Îá¤ò¶´¤ó¤À¤â¤Î¤òÊÑ´¹¤¹¤ë¤³¤È¤Ë¤¹¤ë *)
+
+(* dest: g'¤Î¼Â¹Ô·ë²Ì¤ò³ÊÇ¼¤¹¤ë¥ì¥¸¥¹¥¿¤È¤½¤Î·¿¤ÎÁÈ, cont: ¤³¤ì¤«¤é¸å¤ËÍè¤ëÌ¿ÎáÎó(Let(x, e1, e2)¤Ë¤ª¤±¤ëe2 , regenv: ¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ¤Î´Ä¶­, p: Ì¿ÎáÎó¤Î¥İ¥¸¥·¥ç¥ó *)
+and g' dest cont regenv p = function (* ³ÆÌ¿Îá¤Î¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ. ¤³¤³¤Ç¤Ï, Ì¿ÎáÃæ¤ÎÊÑ¿ô¤ò¥ì¥¸¥¹¥¿¤ËÃÖ¤­´¹¤¨¤¿Ì¿Îá¤òÊÖ¤¹ *)
+  | Nop | Set _ | SetL _ | Comment _ | Restore _ as exp -> (Ans(exp, p), regenv) 
+  | Mov(x) -> (Ans(Mov(find x Type.Int regenv), p), regenv) (* ´Ä¶­¤ËÊÑ¿ô¤ËÂĞ±ş¤¹¤ë¥ì¥¸¥¹¥¿¤¬ÅĞÏ¿¤µ¤ì¤Æ¤¤¤ë¤Ï¤º¤Ê¤Î¤Ç, ¤½¤ì¤ËÊÑ´¹¤¹¤ë *)
   | Neg(x) -> (Ans(Neg(find x Type.Int regenv), p), regenv)
   | Add(x, y') -> (Ans(Add(find x Type.Int regenv, find' y' regenv), p), regenv)
   | Sub(x, y') -> (Ans(Sub(find x Type.Int regenv, find' y' regenv), p), regenv)
@@ -163,6 +166,9 @@ and g' dest cont regenv p = function (* ³ÆÌ¿Îá¤Î¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ (caml2html: reg
       else
         g'_call dest cont regenv exp (fun ys zs -> CallDir(Id.L(x), ys, zs)) ys zs p
   | Save(x, y) -> assert false
+(* dest: g'_if¤Î¼Â¹Ô·ë²Ì¤ò³ÊÇ¼¤¹¤ë¥ì¥¸¥¹¥¿¤È¤½¤Î·¿¤ÎÁÈ, cont: ¤³¤ì¤«¤é¸å¤ËÍè¤ëÌ¿ÎáÎó(Let(x, e1, e2)¤Ë¤ª¤±¤ëe2, 
+regenv: ¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ¤Î´Ä¶­, exp: ÊÑ´¹¤¹¤ëIf¼°, constr: e1, e2¤ò¼õ¤±¼è¤Ã¤Æ¥ì¥¸¥¹¥¿¤ËÊÑ´¹¤·¤¿¸å¤ÎIf¼°¤òÊÖ¤¹´Ø¿ô,
+e1: ¾ò·ï¤¬À®¤êÎ©¤Ä»ş¤ÎÊ¬´ôÀè¤Î¼°, e2: ¾ò·ï¤¬À®¤êÎ©¤¿¤Ê¤¤»ş¤ÎÊ¬´ôÀè¤Î¼°, p: Ì¿ÎáÎó¤Î¥İ¥¸¥·¥ç¥ó *)
 and g'_if dest cont regenv exp constr e1 e2 p = (* if¤Î¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ (caml2html: regalloc_if) *)
   let (e1', regenv1) = g dest cont regenv e1 in
   let (e2', regenv2) = g dest cont regenv e2 in
@@ -197,10 +203,10 @@ and g'_call dest cont regenv exp constr ys zs p = (* ´Ø¿ô¸Æ¤Ó½Ğ¤·¤Î¥ì¥¸¥¹¥¿³ä¤êÅ
    M.empty)
 
 let h { name = Id.L(x); args = ys; fargs = zs; body = e; ret = t } = (* ´Ø¿ô¤Î¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ (caml2html: regalloc_h) *)
-  if List.length ys > Array.length regs || List.length zs > Array.length fregs then
+  if List.length ys > Array.length regs || List.length zs > Array.length fregs then (* À°¿ô°ú¿ô¤Î¿ô¤¬À°¿ô¥ì¥¸¥¹¥¿¤Î¿ô¤ò¾å²ó¤Ã¤Æ¤¤¤¿¤ê ,ÉâÆ°¾®¿ô°ú¿ô¤Î¿ô¤¬, ÉâÆ°¾®¿ô¥ì¥¸¥¹¥¿¤Î¿ô¤ò¾å²ó¤Ã¤Æ¤¤¤¿¤é¥¨¥é¡¼¤òÅÇ¤¤¤Æ½ªÎ» *)
     Format.eprintf "too many arguments for function %s@." x;
-  let regenv = M.add x reg_cl M.empty in
-  let (i, arg_regs, regenv) =
+  let regenv = M.add x reg_cl M.empty in (* ¸Æ¤Ó½Ğ¤·´Ø¿ô¤Î¥é¥Ù¥ë¤òreg_cl¤Ë³ä¤êÅö¤Æ¤¿´Ä¶­ *)
+  let (i, arg_regs, regenv) = (* À°¿ô°ú¿ô¤Î¿ô, À°¿ô°ú¿ô¤Î¥ì¥¸¥¹¥¿, À°¿ô°ú¿ô¤È¥ì¥¸¥¹¥¿¤ÎÂĞ±ş¤òÄÉ²Ã¤·¤¿´Ä¶­ *)
     List.fold_left
       (fun (i, arg_regs, regenv) y ->
         let r = regs.(i) in
@@ -210,7 +216,7 @@ let h { name = Id.L(x); args = ys; fargs = zs; body = e; ret = t } = (* ´Ø¿ô¤Î¥ì
           M.add y r regenv)))
       (0, [], regenv)
       ys in
-  let (d, farg_regs, regenv) =
+  let (d, farg_regs, regenv) = (* ÉâÆ°¾®¿ô¥ì¥¸¥¹¥¿¤Î¿ô, ÉâÆ°¾®¿ô°ú¿ô¤Î¥ì¥¸¥¹¥¿, ÉâÆ°¾®¿ô°ú¿ô¤È¥ì¥¸¥¹¥¿¤ÎÂĞ±ş¤òÄÉ²Ã¤·¤¿´Ä¶­ *)
     List.fold_left
       (fun (d, farg_regs, regenv) z ->
         let fr = fregs.(d) in
@@ -221,10 +227,12 @@ let h { name = Id.L(x); args = ys; fargs = zs; body = e; ret = t } = (* ´Ø¿ô¤Î¥ì
       (0, [], regenv)
       zs in
   let a =
-    match t with
-    | Type.Unit -> Id.gentmp Type.Unit
-    | Type.Float -> fregs.(0)
-    | _ -> regs.(0) in
+    match t with (* ÊÖ¤êÃÍ¤Î·¿¤¬ *)
+    | Type.Unit -> Id.gentmp Type.Unit (* Unit·¿¤Ê¤é¿·¤¿¤Ê²¾¤ÎÊÑ¿ô¤òºî¤ë *)
+    | Type.Float -> fregs.(0) (* ÉâÆ°¾®¿ô·¿¤Ê¤é, ÉÔÆ°¾®¿ôÅÀ¥ì¥¸¥¹¥¿¤ÎÀèÆ¬ *)
+    | _ -> regs.(0) in (* À°¿ô·¿¤Ê¤é, À°¿ô¥ì¥¸¥¹¥¿¤ÎÀèÆ¬ *)
+
+  (* ¤³¤Î´Ä¶­¤Î¤â¤È¤Ç, ´Ø¿ôËÜÂÎe ¤Î¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ¤ò¹Ô¤Ê¤Ã¤Æ, ¤½¤ì¤ò¸µ¤Ë¥ì¥¸¥¹¥¿³ä¤êÅö¤Æ´Ä¶­¤È³ä¤êÅö¤Æ¸å¤Îe'¤òÊÖ¤¹. *)
   let (e', regenv') = g (a, t) (Ans(Mov(a), Syntax.none_pos)) regenv e in
   { name = Id.L(x); args = arg_regs; fargs = farg_regs; body = e'; ret = t }
 

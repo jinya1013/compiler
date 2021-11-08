@@ -1,1 +1,1 @@
-x86/asm.ml
+SPARC/asm.ml

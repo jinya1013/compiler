@@ -66,3 +66,57 @@ make clean
 make
 exit
 make
+make
+make
+make clean
+ls
+cd test
+rm *.op*
+cd ..
+ls
+git remote add origin git@github.com:utokyo-compiler-2021/211012.git
+git branch -M main
+git push -u origin main
+ls
+exit
+make
+make
+make clean
+ls
+exit
+ls
+make
+make clean
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make
+make clean
+make
+make
+make
+make
+make clean
+cd ..
+ls
+exit
+make
+exit
