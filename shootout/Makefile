@@ -1,1 +1,1 @@
-SPARC/Makefile
+x86/Makefile

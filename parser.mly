@@ -11,6 +11,8 @@ let addtyp x = (x, Type.gentyp ())
 %token NOT
 %token MINUS
 %token PLUS
+%token AST
+%token SLASH
 %token MINUS_DOT
 %token PLUS_DOT
 %token AST_DOT
@@ -47,7 +49,7 @@ let addtyp x = (x, Type.gentyp ())
 %left COMMA
 %left EQUAL LESS_GREATER LESS GREATER LESS_EQUAL GREATER_EQUAL
 %left PLUS MINUS PLUS_DOT MINUS_DOT
-%left AST_DOT SLASH_DOT
+%left AST SLASH AST_DOT SLASH_DOT
 %right prec_unary_minus
 %left prec_app
 %left DOT
@@ -89,6 +91,10 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
     { Add($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
 | exp MINUS exp
     { Sub($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
+| exp AST exp
+    { App(Var("sll", (Parsing.symbol_start_pos ()).pos_lnum), [$1; $3], (Parsing.symbol_start_pos ()).pos_lnum) }
+| exp SLASH exp
+    { App(Var("sra", (Parsing.symbol_start_pos ()).pos_lnum), [$1; $3], (Parsing.symbol_start_pos ()).pos_lnum) }
 | exp EQUAL exp
     { Eq($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
 | exp LESS_GREATER exp
@@ -101,6 +107,9 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
     { LE($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
 | exp GREATER_EQUAL exp
     { LE($3, $1, (Parsing.symbol_start_pos ()).pos_lnum) }
+| IF exp THEN exp ELSE exp SEMICOLON
+    %prec prec_if
+    { If($2, $4, $6, (Parsing.symbol_start_pos ()).pos_lnum) }
 | IF exp THEN exp ELSE exp
     %prec prec_if
     { If($2, $4, $6, (Parsing.symbol_start_pos ()).pos_lnum) }
@@ -115,6 +124,9 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
     { FMul($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
 | exp SLASH_DOT exp
     { FDiv($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
+| LET IDENT EQUAL exp IN exp SEMICOLON
+    %prec prec_let
+    { Let(addtyp $2, $4, $6, (Parsing.symbol_start_pos ()).pos_lnum) }
 | LET IDENT EQUAL exp IN exp
     %prec prec_let
     { Let(addtyp $2, $4, $6, (Parsing.symbol_start_pos ()).pos_lnum) }
@@ -131,6 +143,8 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
     { LetTuple($3, $6, $8, (Parsing.symbol_start_pos ()).pos_lnum) }
 | simple_exp DOT LPAREN exp RPAREN LESS_MINUS exp
     { Put($1, $4, $7, (Parsing.symbol_start_pos ()).pos_lnum) }
+| exp SEMICOLON exp SEMICOLON
+    { Let((Id.gentmp Type.Unit, Type.Unit), $1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
 | exp SEMICOLON exp
     { Let((Id.gentmp Type.Unit, Type.Unit), $1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
 | ARRAY_CREATE simple_exp simple_exp

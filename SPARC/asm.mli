@@ -49,6 +49,7 @@ val reg_fsw : Id.t
 val reg_ra : Id.t
 val reg_hp : Id.t
 val reg_sp : Id.t
+val reg_ftp : Id.t
 val is_reg : Id.t -> bool
 val fv : t -> Id.t list
 val concat : t -> Id.t * Type.t -> t -> t

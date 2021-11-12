@@ -1,1 +1,1 @@
-SPARC/asm.mli
+x86/asm.mli

@@ -36,7 +36,7 @@ and exp = (* 一つ一つの命令に対応する式 (caml2html: sparcasm_exp) *)
   | Restore of Id.t (* スタック変数から値を復元 (caml2html: sparcasm_restore) *)
 type fundef = { name : Id.l; args : Id.t list; fargs : Id.t list; body : t; ret : Type.t }
 (* プログラム全体 = 浮動小数点数テーブル + トップレベル関数 + メインの式 (caml2html: sparcasm_prog) *)
-type prog = Prog of (Id.l * float) list * fundef list * t
+type prog = Prog of (Id.l * float * int) list * fundef list * t
 
 let pos_of_t  = function
   | Ans (_, p) -> p
@@ -54,20 +54,21 @@ let regs = (* Array.init 16 (fun i -> Printf.sprintf "%%r%d" i) *)
   |]
 (* 関数呼び出し時は, クロージャのアドレスをx6に, 引数をx7, x8, に, 戻り番地をx1に入れる *)
 let fregs = [| 
-     "f0"; "%f1"; "%f2"; "%f3"; "%f4"; "%f5"; "%f6"; "%f7"; 
+     "%f1"; "%f2"; "%f3"; "%f4"; "%f5"; "%f6"; "%f7"; 
      "%f8"; "%f9"; "%f10"; "%f11"; "%f12"; "%f13";
      "%f14"; "%f15"; "%f16"; "%f17"; "%f18"; "%f19"; "%f20";
      "%f21"; "%f22"; "%f23"; "%f24"; "%f25"; "%f26"; "%f27";
-     "%f28"; "%f29"; "%f30"; "%f31"
+     "%f28"; "%f29"; "%f30";
   |]
 let allregs = Array.to_list regs
 let allfregs = Array.to_list fregs
 let reg_cl = "%x4" (* closure address (caml2html: sparcasm_regcl) *)
 let reg_sw = "%x5"(* temporary for swap *)
-let reg_fsw = "%f31" (* temporary for swap *)
+let reg_fsw = "%f30" (* temporary for swap *)
 let reg_sp = "%x2" (* stack pointer *)
 let reg_hp = "%x3" (* heap pointer (caml2html: sparcasm_reghp) *)
 let reg_ra = "%x1" (* return address *)
+let reg_ftp = "%f31"
 let is_reg x = (x.[0] = '%')
 
 (* let co_freg_table =
