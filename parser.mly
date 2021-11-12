@@ -30,8 +30,10 @@ let addtyp x = (x, Type.gentyp ())
 %token REC
 %token COMMA
 %token ARRAY_CREATE
+%token FUN
 %token DOT
 %token LESS_MINUS
+%token MINUS_GREATER
 %token SEMICOLON
 %token LPAREN
 %token RPAREN
@@ -51,6 +53,7 @@ let addtyp x = (x, Type.gentyp ())
 %right prec_unary_minus
 %left prec_app
 %left DOT
+%right MINUS_GREATER FUN
 
 /* (* 開始記号の定義 *) */
 %type <Syntax.t> exp
@@ -136,6 +139,8 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
 | ARRAY_CREATE simple_exp simple_exp
     %prec prec_app
     { Array($2, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
+| FUN formal_args MINUS_GREATER exp
+    { Lambda($2, $4, (Parsing.symbol_start_pos ()).pos_lnum)}
 | error
     { failwith
         (Printf.sprintf "parse error near characters %d-%d in line %d-%d"
