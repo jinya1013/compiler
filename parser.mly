@@ -140,7 +140,10 @@ exp: /* (* ∞Ï»Ã§Œº∞ (caml2html: parser_exp) *) */
     %prec prec_app
     { Array($2, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
 | FUN formal_args MINUS_GREATER exp
-    { Lambda($2, $4, (Parsing.symbol_start_pos ()).pos_lnum)}
+    { let x = Id.genid "fun_abst" in 
+        LetRec({ name = (x, Type.gentyp()); args = $2; body = $4 }, 
+        Var(x, (Parsing.symbol_start_pos ()).pos_lnum), 
+        (Parsing.symbol_start_pos ()).pos_lnum) }
 | error
     { failwith
         (Printf.sprintf "parse error near characters %d-%d in line %d-%d"

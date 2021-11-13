@@ -22,7 +22,7 @@ let rec deref_typ = (* 型変数を中身でおきかえる関数 *)
             変換後の型
 *)
     function
-  | Type.Fun(t1s, t2) -> Type.Fun(List.map deref_typ t1s, deref_typ t2)
+  | Type.Fun(t1, t2) -> Type.Fun(deref_typ t1, deref_typ t2)
   | Type.Tuple(ts) -> Type.Tuple(List.map deref_typ ts)
   | Type.Array(t) -> Type.Array(deref_typ t)
   | Type.Var({ contents = None } as r) ->
@@ -89,6 +89,15 @@ let rec deref_term =
   | Put(e1, e2, e3, p) -> Put(deref_term e1, deref_term e2, deref_term e3, p)
   | e -> e
 
+(* (Type.Fun(List.map snd yts, g (M.add_list yts env) e1))
+(Type.Fun(t1, (Type.Fun(t2, ...(Type.Fun(tn,g (M.add_list yts env) e1) )))) *)
+(* List.fold_right f as b = f(an ...f(a2 f(a1 b))) *)
+(* 引数の型のリストtsと式の型eを受け取って, Type.Fun(t1, (Type.Fun(t2, ...(Type.Fun(tn,g (M.add_list yts env) e1) )))) という入れ子の関数の方を定義する *)
+let seq ts e = 
+    List.fold_right (fun t e -> Type.Fun(t, e)) ts e
+
+
+
 let rec occur r1 = (* occur check *)
 (* 
     与えられた2つの型r1, r2に対して, 一方が他方に含まれているか否かをbool値で返す.
@@ -104,7 +113,7 @@ let rec occur r1 = (* occur check *)
 
 *)
     function 
-  | Type.Fun(t2s, t2) -> List.exists (occur r1) t2s || occur r1 t2
+  | Type.Fun(t2s, t2) -> occur r1 t2s || occur r1 t2
   | Type.Tuple(t2s) -> List.exists (occur r1) t2s
   | Type.Array(t2) -> occur r1 t2
   | Type.Var(r2) when r1 == r2 -> true
@@ -129,7 +138,7 @@ let rec unify p t1 t2 = (* 型が合うように、型変数への代入をする *)
   match t1, t2 with
   | Type.Unit, Type.Unit | Type.Bool, Type.Bool | Type.Int, Type.Int | Type.Float, Type.Float -> ()
   | Type.Fun(t1s, t1'), Type.Fun(t2s, t2') ->
-      (try List.iter2 (unify p) t1s t2s
+      (try unify p t1s t2s
       with Invalid_argument(_) -> raise (Unify(t1, t2, p)));
       unify p t1' t2'
   | Type.Tuple(t1s), Type.Tuple(t2s) ->
@@ -207,11 +216,13 @@ let rec g env e = (* 型推論ルーチン *)
         t
     | LetRec({ name = (x, t); args = yts; body = e1 }, e2, p) -> (* let recの型推論 *)
         let env = M.add x t env in
-        unify p t (Type.Fun(List.map snd yts, g (M.add_list yts env) e1));
+        (* unify p t (Type.Fun(List.map snd yts, g (M.add_list yts env) e1)); *)
+        unify p t (seq (List.map snd yts) (g (M.add_list yts env) e1));
         g env e2
     | App(e, es, p) -> (* 関数適用の型推論 *)
         let t = Type.gentyp () in
-        unify p (g env e) (Type.Fun(List.map (g env) es, t));
+        (* unify p (g env e) (Type.Fun(List.map (g env) es, t)); *)
+        unify p (g env e) (seq (List.map (g env) es) t);
         t
     | Tuple(es, p) -> Type.Tuple(List.map (g env) es)
     | LetTuple(xts, e1, e2, p) ->
