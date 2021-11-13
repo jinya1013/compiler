@@ -7,6 +7,81 @@ exception Error of t * Type.t * Type.t * Syntax.pos
 
 let extenv = ref M.empty
 
+let output_env outchan m = 
+    match M.bindings m with
+    | (x, t) :: xts ->
+    (
+        output_string outchan "(";
+        Id.output_id outchan x;
+        output_string outchan ", ";
+        Type.output_type outchan t;
+        output_string outchan ")";
+
+        List.iter (fun (x, t) -> 
+        output_string outchan ", ";
+        output_string outchan "(";
+        Id.output_id outchan x;
+        output_string outchan ", ";
+        Type.output_type outchan t;
+        output_string outchan ")") xts
+    )
+    | _ -> ()
+
+
+let rec uncurry = function
+| Type.FunCurry(t1, t2) -> 
+    uncurry (Type.Fun([t1], t2))
+| Type.Fun(t1s, Type.FunCurry(t1', t2')) -> uncurry (Type.Fun(t1s @ [t1'], t2'))
+| Type.Fun(t1s, t2) as e -> e
+| t -> t
+
+let rec uncurry_typ = 
+    function
+  | Type.FunCurry(t1, t2) as e -> uncurry e
+  | Type.Tuple(ts) -> Type.Tuple(List.map uncurry_typ ts)
+  | Type.Array(t) -> Type.Array(uncurry_typ t)
+  | t -> t
+
+let rec uncurry_id_typ (x, t) = 
+    (x, uncurry_typ t)
+
+let rec uncurry_term = 
+    function
+  | Not(e, p) -> Not(uncurry_term e, p)
+  | Neg(e, p) -> Neg(uncurry_term e, p)
+  | Add(e1, e2, p) -> Add(uncurry_term e1, uncurry_term e2, p)
+  | Sub(e1, e2, p) -> Sub(uncurry_term e1, uncurry_term e2, p)
+  | Eq(e1, e2, p) -> Eq(uncurry_term e1, uncurry_term e2, p)
+  | LE(e1, e2, p) -> LE(uncurry_term e1, uncurry_term e2, p)
+  | FNeg(e, p) -> FNeg(uncurry_term e, p)
+  | FAdd(e1, e2, p) -> FAdd(uncurry_term e1, uncurry_term e2, p)
+  | FSub(e1, e2, p) -> FSub(uncurry_term e1, uncurry_term e2, p)
+  | FMul(e1, e2, p) -> FMul(uncurry_term e1, uncurry_term e2, p)
+  | FDiv(e1, e2, p) -> FDiv(uncurry_term e1, uncurry_term e2, p)
+  | If(e1, e2, e3, p) -> If(uncurry_term e1, uncurry_term e2, uncurry_term e3, p)
+  | Let(xt, e1, e2, p) -> Let(uncurry_id_typ xt, uncurry_term e1, uncurry_term e2, p)
+  | LetRec({ name = xt; args = yts; body = e1 }, e2, p) ->
+      LetRec({ name = uncurry_id_typ xt;
+               args = List.map uncurry_id_typ yts;
+               body = uncurry_term e1 },
+             uncurry_term e2, p)
+  | App(e, es, p) -> App(uncurry_term e, List.map uncurry_term es, p)
+  | Tuple(es, p) -> Tuple(List.map uncurry_term es, p)
+  | LetTuple(xts, e1, e2, p) -> LetTuple(List.map uncurry_id_typ xts, uncurry_term e1, uncurry_term e2, p)
+  | Array(e1, e2, p) -> Array(uncurry_term e1, uncurry_term e2, p)
+  | Get(e1, e2, p) -> Get(uncurry_term e1, uncurry_term e2, p)
+  | Put(e1, e2, e3, p) -> Put(uncurry_term e1, uncurry_term e2, uncurry_term e3, p)
+  | e -> e
+
+let rec map_from_list m = function
+| (x, t) :: xts -> map_from_list (M.add x t m) xts
+| [] -> m
+
+let uncurry_env env = 
+    let env' = M.bindings env in
+    let new_env' = List.map (fun (x, t) -> (x, uncurry_typ t)) env' in
+    map_from_list M.empty new_env'
+
 (* for pretty printing (and type normalization) *)
 let rec deref_typ = (* 型変数を中身でおきかえる関数 *)
 (* 
@@ -22,7 +97,7 @@ let rec deref_typ = (* 型変数を中身でおきかえる関数 *)
             変換後の型
 *)
     function
-  | Type.Fun(t1, t2) -> Type.Fun(deref_typ t1, deref_typ t2)
+  | Type.FunCurry(t1, t2) -> Type.FunCurry(deref_typ t1, deref_typ t2)
   | Type.Tuple(ts) -> Type.Tuple(List.map deref_typ ts)
   | Type.Array(t) -> Type.Array(deref_typ t)
   | Type.Var({ contents = None } as r) ->
@@ -89,12 +164,12 @@ let rec deref_term =
   | Put(e1, e2, e3, p) -> Put(deref_term e1, deref_term e2, deref_term e3, p)
   | e -> e
 
-(* (Type.Fun(List.map snd yts, g (M.add_list yts env) e1))
-(Type.Fun(t1, (Type.Fun(t2, ...(Type.Fun(tn,g (M.add_list yts env) e1) )))) *)
+(* (Type.FunCurry(List.map snd yts, g (M.add_list yts env) e1))
+(Type.FunCurry(t1, (Type.FunCurry(t2, ...(Type.FunCurry(tn,g (M.add_list yts env) e1) )))) *)
 (* List.fold_right f as b = f(an ...f(a2 f(a1 b))) *)
-(* 引数の型のリストtsと式の型eを受け取って, Type.Fun(t1, (Type.Fun(t2, ...(Type.Fun(tn,g (M.add_list yts env) e1) )))) という入れ子の関数の方を定義する *)
+(* 引数の型のリストtsと式の型eを受け取って, Type.FunCurry(t1, (Type.FunCurry(t2, ...(Type.FunCurry(tn,g (M.add_list yts env) e1) )))) という入れ子の関数の方を定義する *)
 let seq ts e = 
-    List.fold_right (fun t e -> Type.Fun(t, e)) ts e
+    List.fold_right (fun t e -> Type.FunCurry(t, e)) ts e
 
 
 
@@ -113,7 +188,7 @@ let rec occur r1 = (* occur check *)
 
 *)
     function 
-  | Type.Fun(t2s, t2) -> occur r1 t2s || occur r1 t2
+  | Type.FunCurry(t2s, t2) -> occur r1 t2s || occur r1 t2
   | Type.Tuple(t2s) -> List.exists (occur r1) t2s
   | Type.Array(t2) -> occur r1 t2
   | Type.Var(r2) when r1 == r2 -> true
@@ -137,7 +212,7 @@ let rec unify p t1 t2 = (* 型が合うように、型変数への代入をする *)
 *)
   match t1, t2 with
   | Type.Unit, Type.Unit | Type.Bool, Type.Bool | Type.Int, Type.Int | Type.Float, Type.Float -> ()
-  | Type.Fun(t1s, t1'), Type.Fun(t2s, t2') ->
+  | Type.FunCurry(t1s, t1'), Type.FunCurry(t2s, t2') ->
       (try unify p t1s t2s
       with Invalid_argument(_) -> raise (Unify(t1, t2, p)));
       unify p t1' t2'
@@ -216,12 +291,12 @@ let rec g env e = (* 型推論ルーチン *)
         t
     | LetRec({ name = (x, t); args = yts; body = e1 }, e2, p) -> (* let recの型推論 *)
         let env = M.add x t env in
-        (* unify p t (Type.Fun(List.map snd yts, g (M.add_list yts env) e1)); *)
+        (* unify p t (Type.FunCurry(List.map snd yts, g (M.add_list yts env) e1)); *)
         unify p t (seq (List.map snd yts) (g (M.add_list yts env) e1));
         g env e2
     | App(e, es, p) -> (* 関数適用の型推論 *)
         let t = Type.gentyp () in
-        (* unify p (g env e) (Type.Fun(List.map (g env) es, t)); *)
+        (* unify p (g env e) (Type.FunCurry(List.map (g env) es, t)); *)
         unify p (g env e) (seq (List.map (g env) es) t);
         t
     | Tuple(es, p) -> Type.Tuple(List.map (g env) es)
@@ -247,14 +322,18 @@ let rec g env e = (* 型推論ルーチン *)
 
 let f e =
   extenv := M.empty;
-(*
-  (match deref_typ (g M.empty e) with
+
+
+  (* (match deref_typ (g M.empty e) with
   | Type.Unit -> ()
-  | _ -> Format.eprintf "warning: final result does not have type unit@.");
-*)
+  | _ -> Format.eprintf "warning: final result does not have type unit@."); *)
+
   (try unify Syntax.top_pos Type.Unit (g M.empty e)
   with 
     | Unify _ -> failwith "top level does not have type unit"
     | Error (_, _, _, p) -> print_newline (); failwith (Printf.sprintf "top level Error in line %d" p));
   extenv := M.map deref_typ !extenv;
-  deref_term e
+  let e' = deref_term e in 
+  (* extenv := uncurry_env !extenv; *)
+  (* uncurry_term e' *)
+  e'

@@ -148,6 +148,10 @@ let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
       let e1', t1 = g (M.add_list yts env') e1 in
       LetRec({ name = (x, t); args = yts; body = e1' }, e2', p), t2
   | Syntax.App(Syntax.Var(f, p1), e2s, p2) when not (M.mem f env) -> (* 外部関数の呼び出し (caml2html: knormal_extfunapp) *)
+      (* Syntax.output_prog stdout (Syntax.App(Syntax.Var(f, p1), e2s, p2));
+      Typing.output_env stdout !Typing.extenv;
+      Id.output_id stdout f; *)
+      (* Type.output_type stdout (M.find f !Typing.extenv); *)
       (match M.find f !Typing.extenv with
       | Type.Fun(_, t) ->
           let rec bind xs = function (* "xs" are identifiers for the arguments *)
@@ -158,7 +162,14 @@ let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
           bind [] e2s (* left-to-right evaluation *)
       | _ -> assert false)
   | Syntax.App(e1, e2s, p) ->
-      (match g env e1 with
+      let (xx, tt) = g env e1 in
+      output_string stdout "\nexp: \n";
+      Syntax.output_prog stdout e1;
+      output_string stdout "\ntype: \n";
+      Type.output_type stdout tt;
+      output_string stdout "\nenv: \n";
+      Typing.output_env stdout env;
+      (match (xx, tt) with
       | _, Type.Fun(_, t) as g_e1 ->
           insert_let p g_e1
             (fun f ->
@@ -168,7 +179,17 @@ let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
                     insert_let p (g env e2)
                       (fun x -> bind (xs @ [x]) e2s) in
               bind [] e2s) (* left-to-right evaluation *)
-      | _ -> assert false)
+      | _ -> 
+      (
+        output_string stdout "\nexp: \n";
+        Syntax.output_prog stdout e1;
+        output_string stdout "\ntype: \n";
+        Type.output_type stdout tt;
+        output_string stdout "\nenv: \n";
+        Typing.output_env stdout env;
+        assert false
+      )
+      )
   | Syntax.Tuple(es, p) ->
       let rec bind xs ts = function (* "xs" and "ts" are identifiers and types for the elements *)
         | [] -> Tuple(xs, p), Type.Tuple(ts)
