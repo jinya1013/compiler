@@ -1,4 +1,3 @@
-
 type pos = int
 type t = (* MinCamlの構文を表現するデータ型 (caml2html: syntax_t) *)
   | Unit of pos
@@ -26,6 +25,7 @@ type t = (* MinCamlの構文を表現するデータ型 (caml2html: syntax_t) *)
   | Array of t * t * pos
   | Get of t * t * pos
   | Put of t * t * t * pos
+  (* | Lambda of (Id.t * Type.t) list * t * pos *)
 
 and fundef = { name : Id.t * Type.t; args : (Id.t * Type.t) list; body : t }
 
@@ -168,6 +168,8 @@ let rec output_syntax outchan s depth =
     Id.output_tab2 outchan depth p;
     output_string outchan "LET ";
     Id.output_id outchan (fst t1);
+    output_string outchan " : ";
+    Type.output_type outchan (snd t1);
     output_syntax outchan t2 (depth + 1);
     output_syntax outchan t3 (depth + 1);
   )
@@ -187,11 +189,19 @@ let rec output_syntax outchan s depth =
     Id.output_tab2 outchan (depth + 1) p;
     output_string outchan "name = ";
     Id.output_id outchan (fst f);
+    output_string outchan " : ";
+    Type.output_type outchan (snd f);
     Id.output_tab2 outchan (depth + 1) p;
     output_string outchan "args = ";
-    output_string outchan "(";
-    Id.output_id_list outchan (fst (List.split a));
-    output_string outchan ")";
+    (
+      match a with
+      | (x1, t1) :: a2 -> 
+        (
+          Id.output_id outchan x1; output_string outchan " : "; Type.output_type outchan t1; 
+          List.iter (fun (x, t) -> output_string outchan ", "; Id.output_id outchan x; output_string outchan " : "; Type.output_type outchan t) a2;
+        )
+      | _ -> ()
+    );
     Id.output_tab2 outchan (depth + 1) p;
     output_string outchan "body = ";
     output_syntax outchan b (depth + 2);
@@ -217,10 +227,10 @@ let rec output_syntax outchan s depth =
   | LetTuple (t1s, t2, t3, p) ->
   (
     Id.output_tab2 outchan depth p;
-    output_string outchan "LET";
-    output_string outchan "(";
-    Id.output_id_list outchan (fst (List.split t1s));
-    output_string outchan ")";
+    output_string outchan "LETTUPLE";
+    output_string outchan "( ";
+    List.iter (fun (x, t) -> Id.output_id outchan x; output_string outchan " : "; Type.output_type outchan t; output_string outchan " ") t1s;
+    output_string outchan " )";
     output_syntax outchan t2 (depth + 1);
     output_syntax outchan t3 (depth + 1);
   )
@@ -381,6 +391,8 @@ and output_prog outchan s =
     output_string outchan ((string_of_int p) ^ "\t");
     output_string outchan "LET ";
     Id.output_id outchan (fst t1);
+    output_string outchan " : ";
+    Type.output_type outchan (snd t1);
     output_syntax outchan t2 1;
     output_syntax outchan t3 1;
   )
@@ -399,11 +411,19 @@ and output_prog outchan s =
     Id.output_tab2 outchan 1 p;
     output_string outchan "name = ";
     Id.output_id outchan (fst f);
+    output_string outchan " : ";
+    Type.output_type outchan (snd f);
     Id.output_tab2 outchan 1 p;
     output_string outchan "args = ";
-    output_string outchan "(";
-    Id.output_id_list outchan (fst (List.split a));
-    output_string outchan ")";
+    (
+      match a with
+      | (x1, t1) :: a2 -> 
+        (
+          Id.output_id outchan x1; output_string outchan " : "; Type.output_type outchan t1; 
+          List.iter (fun (x, t) -> output_string outchan ", "; Id.output_id outchan x; output_string outchan " : "; Type.output_type outchan t) a2;
+        )
+      | _ -> ()
+    );
     Id.output_tab2 outchan 1 p;
     output_string outchan "body = ";
     output_syntax outchan b 2;
@@ -429,10 +449,10 @@ and output_prog outchan s =
   | LetTuple (t1s, t2, t3, p) ->
   (
     output_string outchan ((string_of_int p) ^ "\t");
-    output_string outchan "LET";
-    output_string outchan "(";
-    Id.output_id_list outchan (fst (List.split t1s));
-    output_string outchan ")";
+    output_string outchan "LETTUPLE";
+    output_string outchan "( ";
+    List.iter (fun (x, t) -> Id.output_id outchan x; output_string outchan " : "; Type.output_type outchan t; output_string outchan " ") t1s;
+    output_string outchan " )";
     output_syntax outchan t2 1;
     output_syntax outchan t3 1;
   )
@@ -460,3 +480,6 @@ and output_prog outchan s =
   )
   );
   output_string outchan "\n";
+
+
+
