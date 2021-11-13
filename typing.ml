@@ -28,16 +28,17 @@ let output_env outchan m =
     | _ -> ()
 
 
-let rec uncurry = function
-| Type.FunCurry(t1, t2) -> 
-    uncurry (Type.Fun([t1], t2))
-| Type.Fun(t1s, Type.FunCurry(t1', t2')) -> uncurry (Type.Fun(t1s @ [t1'], t2'))
+let rec uncurry n = function
+| Type.FunCurry(t1, t2, n) -> 
+    uncurry n (Type.Fun([t1], t2))
+| Type.Fun(t1s, Type.FunCurry(t1', t2', m)) when n = m -> uncurry n (Type.Fun(t1s @ [t1'], t2'))
+| Type.Fun(t1s, Type.FunCurry(t1', t2', m)) -> Type.Fun(t1s, (uncurry m (Type.FunCurry(t1', t2', m))))
 | Type.Fun(t1s, t2) as e -> e
 | t -> t
 
 let rec uncurry_typ = 
     function
-  | Type.FunCurry(t1, t2) as e -> uncurry e
+  | Type.FunCurry(t1, t2, n) as e -> uncurry n e
   | Type.Tuple(ts) -> Type.Tuple(List.map uncurry_typ ts)
   | Type.Array(t) -> Type.Array(uncurry_typ t)
   | t -> t
@@ -97,7 +98,8 @@ let rec deref_typ = (* 型変数を中身でおきかえる関数 *)
             変換後の型
 *)
     function
-  | Type.FunCurry(t1, t2) -> Type.FunCurry(deref_typ t1, deref_typ t2)
+  | Type.FunCurry(t1, t2, n) -> Type.FunCurry(deref_typ t1, deref_typ t2, n)
+  | Type.Fun(t1s, t2) -> Type.Fun(List.map deref_typ t1s, deref_typ t2)
   | Type.Tuple(ts) -> Type.Tuple(List.map deref_typ ts)
   | Type.Array(t) -> Type.Array(deref_typ t)
   | Type.Var({ contents = None } as r) ->
@@ -168,8 +170,11 @@ let rec deref_term =
 (Type.FunCurry(t1, (Type.FunCurry(t2, ...(Type.FunCurry(tn,g (M.add_list yts env) e1) )))) *)
 (* List.fold_right f as b = f(an ...f(a2 f(a1 b))) *)
 (* 引数の型のリストtsと式の型eを受け取って, Type.FunCurry(t1, (Type.FunCurry(t2, ...(Type.FunCurry(tn,g (M.add_list yts env) e1) )))) という入れ子の関数の方を定義する *)
+let counter = ref 0
+
 let seq ts e = 
-    List.fold_right (fun t e -> Type.FunCurry(t, e)) ts e
+    incr counter;
+    List.fold_right (fun t e -> Type.FunCurry(t, e, !counter)) ts e
 
 
 
@@ -188,7 +193,7 @@ let rec occur r1 = (* occur check *)
 
 *)
     function 
-  | Type.FunCurry(t2s, t2) -> occur r1 t2s || occur r1 t2
+  | Type.FunCurry(t2s, t2, _) -> occur r1 t2s || occur r1 t2
   | Type.Tuple(t2s) -> List.exists (occur r1) t2s
   | Type.Array(t2) -> occur r1 t2
   | Type.Var(r2) when r1 == r2 -> true
@@ -212,7 +217,7 @@ let rec unify p t1 t2 = (* 型が合うように、型変数への代入をする *)
 *)
   match t1, t2 with
   | Type.Unit, Type.Unit | Type.Bool, Type.Bool | Type.Int, Type.Int | Type.Float, Type.Float -> ()
-  | Type.FunCurry(t1s, t1'), Type.FunCurry(t2s, t2') ->
+  | Type.FunCurry(t1s, t1', _), Type.FunCurry(t2s, t2', _) ->
       (try unify p t1s t2s
       with Invalid_argument(_) -> raise (Unify(t1, t2, p)));
       unify p t1' t2'
@@ -320,6 +325,15 @@ let rec g env e = (* 型推論ルーチン *)
     | Unify(t1, t2, p) -> raise (Error(deref_term e, deref_typ t1, deref_typ t2, p))
     | Error(e, t1, t2, p) -> raise (Error(deref_term e, deref_typ t1, deref_typ t2, p))
 
+
+let rec eta = function
+| App(e1, e2, p) ->
+(
+    let t = type_of e1 in
+    
+    LetRec({ name = (x, t); args = yts; body = e1' }, App(e1, [e2] @ [yts]), p)
+)
+
 let f e =
   extenv := M.empty;
 
@@ -334,6 +348,6 @@ let f e =
     | Error (_, _, _, p) -> print_newline (); failwith (Printf.sprintf "top level Error in line %d" p));
   extenv := M.map deref_typ !extenv;
   let e' = deref_term e in 
-  (* extenv := uncurry_env !extenv; *)
-  (* uncurry_term e' *)
+  (* extenv := uncurry_env !extenv;
+  uncurry_term e' *)
   e'
