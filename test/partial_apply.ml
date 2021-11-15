@@ -1,4 +1,3 @@
-let rec f x y = x + y + 1 in
-let a = 5 in
-let g  = f a in
-print_int (g 5)
+let rec sum n k = if n < 1 then (k 0) else (sum (n-1) (fun x -> (n + x))) in
+let result = sum 4 (fun x -> x) in
+print_int result

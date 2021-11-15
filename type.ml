@@ -29,17 +29,20 @@ let rec output_type outchan s =
   )
   | Fun(t1s, t2) -> 
   (
-    output_string outchan " Fun ( (";
+    output_string outchan " Fun ( ";
     (
       match t1s with
+      | [t] -> output_type outchan t;
       | th :: tt ->
       (
+        output_string outchan "( ";
         output_type outchan th;
         List.iter (fun t -> output_string outchan ", "; output_type outchan t) tt; 
+        output_string outchan " )";
       )
       | _ -> ()
     );
-    output_string outchan ") -> ";
+    output_string outchan " -> ";
     output_type outchan t2;
     output_string outchan " )";
   )
@@ -48,10 +51,10 @@ let rec output_type outchan s =
     match ts with
     | th :: tt -> 
     (
-      output_string outchan "(";
+      output_string outchan "( ";
       output_type outchan th;
       List.iter (fun t -> output_string outchan " * "; output_type outchan t) tt;
-      output_string outchan ")";
+      output_string outchan " )";
 
     )
     | _ -> ()

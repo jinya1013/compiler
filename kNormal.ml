@@ -163,12 +163,12 @@ let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
       | _ -> assert false)
   | Syntax.App(e1, e2s, p) ->
       let (xx, tt) = g env e1 in
-      output_string stdout "\nexp: \n";
+      (* output_string stdout "\nexp: \n";
       Syntax.output_prog stdout e1;
       output_string stdout "\ntype: \n";
       Type.output_type stdout tt;
       output_string stdout "\nenv: \n";
-      Typing.output_env stdout env;
+      Typing.output_env stdout env; *)
       (match (xx, tt) with
       | _, Type.Fun(_, t) as g_e1 ->
           insert_let p g_e1
