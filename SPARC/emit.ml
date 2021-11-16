@@ -121,7 +121,6 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   | NonTail(x), Restore(y) when List.mem x allregs -> 
       Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
   | NonTail(x), Restore(y) ->
-      Id.output_id stdout x;
       assert (List.mem x allfregs);
       Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
   (* 末尾だったら計算結果を第一レジスタにセットしてリターン (caml2html: emit_tailret) *) (* 返り値がない命令 *)
