@@ -36,7 +36,7 @@ and exp = (* 一つ一つの命令に対応する式 (caml2html: sparcasm_exp) *)
   | Restore of Id.t (* スタック変数から値を復元 (caml2html: sparcasm_restore) *)
 type fundef = { name : Id.l; args : Id.t list; fargs : Id.t list; body : t; ret : Type.t }
 (* プログラム全体 = 浮動小数点数テーブル + トップレベル関数 + メインの式 (caml2html: sparcasm_prog) *)
-type prog = Prog of (Id.l * float) list * fundef list * t
+type prog = Prog of (int * float) list * fundef list * t
 
 let pos_of_t  = function
   | Ans (_, p) -> p
@@ -58,13 +58,14 @@ let fregs = [|
      "%f8"; "%f9"; "%f10"; "%f11"; "%f12"; "%f13";
      "%f14"; "%f15"; "%f16"; "%f17"; "%f18"; "%f19"; "%f20";
      "%f21"; "%f22"; "%f23"; "%f24"; "%f25"; "%f26"; "%f27";
-     "%f28"; "%f29"; "%f30"; "%f31"
+     "%f28"; "%f29"; "%f31"
   |]
 let allregs = Array.to_list regs
 let allfregs = Array.to_list fregs
 let reg_cl = "%x4" (* closure address (caml2html: sparcasm_regcl) *)
 let reg_sw = "%x5"(* temporary for swap *)
 let reg_fsw = "%f31" (* temporary for swap *)
+let reg_ftp = "%f30"
 let reg_sp = "%x2" (* stack pointer *)
 let reg_hp = "%x3" (* heap pointer (caml2html: sparcasm_reghp) *)
 let reg_ra = "%x1" (* return address *)
@@ -386,9 +387,9 @@ and output_prog outchan (Prog(table, f, e)) =
   output_string outchan "FLOAT_TABLE";
   List.iter 
   (
-    fun (label, fl) ->
+    fun (fi, fl) ->
     Id.output_tab outchan 1;
-    Id.output_label outchan label;
+    output_string outchan (string_of_int fi);
     output_string outchan " : ";
     output_string outchan (string_of_float fl)
   ) 

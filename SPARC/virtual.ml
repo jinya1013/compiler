@@ -30,6 +30,11 @@ let expand xts ini addf addi =
     (fun (offset, acc) x t ->
       (offset + 4, addi x t offset acc))
 
+let counter = ref (-4)
+let gen_offset_ft () = 
+  counter := !counter + 4;
+  !counter
+
 let rec g env = function (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
   | Closure.Unit(p) -> Ans(Nop, p)
   | Closure.Int(i, p) -> Ans(Set(i), p)
@@ -40,11 +45,12 @@ let rec g env = function (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
           let (l, _) = List.find (fun (_, d') -> d = d') !data in
           l
         with Not_found ->
-          let l = Id.L(Id.genid "l") in
+          let l = gen_offset_ft ()in
           data := (l, d) :: !data; (* 新しい浮動小数のラベルを生成して辞書に追加 *)
           l in
-      let x = Id.genid "l" in
-      Let((x, Type.Int), SetL(l), Ans(LdDF(x, C(0)), p), p)
+      (* let x = Id.genid "l" in *)
+      (* Let((x, Type.Int), SetL(l), Ans(LdDF(x, C(0)), p), p) *)
+      Ans(LdDF(reg_ftp, C(l)), p)
   | Closure.Neg(x, p) -> Ans(Neg(x), p)
   | Closure.Add(x, y, p) -> Ans(Add(x, V(y)), p)
   | Closure.Sub(x, y, p) -> Ans(Sub(x, V(y)), p)
