@@ -33,6 +33,20 @@ let output_env outchan m =
     )
     | _ -> ()
 
+let rec make_abst_args acc = function
+| Type.FunCurry(t1, t2, n) -> make_abst_args (acc @ [(Id.genid "abst_args", t1)]) t2
+| _ -> acc
+
+let counter = ref 0
+(* 
+    引数の型のリストtsと式の型eを受け取って, Type.FunCurry(t1, (Type.FunCurry(t2, ...(Type.FunCurry(tn,g (M.add_list yts env) e1) )))) という入れ子の関数の型を定義する.
+    この際, 同じ関数をカリー化した式かどうか判別するための番号がcounterである.
+*)
+let seq ts e = 
+    incr counter;
+    List.fold_right (fun t e -> Type.FunCurry(t, e, !counter)) ts e
+
+
 (* FunCurryをFunに直す(uncurryする)関数, nはFunCurryのラベル *)
 let rec uncurry n = function
 | Type.FunCurry(t1, t2, n) -> 
@@ -151,46 +165,60 @@ let rec deref_term env =
   | Add(e1, e2, p) -> 
   (
       let e1 = deref_term env e1 in
-      let e2 = deref_team env e2 in
-      let t1 = get_typ 
-      Add(deref_term e1, deref_term e2, p)
+      let e2 = deref_term env e2 in
+      (* output_string stdout "\nEXP\n";
+      Syntax.output_prog stdout e1;
+      output_string stdout "\nTYPE\n";
+      Type.output_type stdout (get_typ env e1);
+      output_string stdout "\nEND\n"; *)
+      match (get_typ env e1) with
+      | Type.Float -> FAdd(e1, e2, p)
+      | _ -> Add(e1, e2, p)
   )
-  | Sub(e1, e2, p) -> Sub(deref_term e1, deref_term e2, p)
-  | Eq(e1, e2, p) -> Eq(deref_term e1, deref_term e2, p)
-  | LE(e1, e2, p) -> LE(deref_term e1, deref_term e2, p)
-  | FNeg(e, p) -> FNeg(deref_term e, p)
-  | FAdd(e1, e2, p) -> FAdd(deref_term e1, deref_term e2, p)
-  | FSub(e1, e2, p) -> FSub(deref_term e1, deref_term e2, p)
-  | FMul(e1, e2, p) -> FMul(deref_term e1, deref_term e2, p)
-  | FDiv(e1, e2, p) -> FDiv(deref_term e1, deref_term e2, p)
-  | If(e1, e2, e3, p) -> If(deref_term e1, deref_term e2, deref_term e3, p)
-  | Let(xt, e1, e2, p) -> Let(deref_id_typ xt, deref_term e1, deref_term e2, p)
+  | Sub(e1, e2, p) -> 
+    (
+      let e1 = deref_term env e1 in
+      let e2 = deref_term env e2 in
+      (* output_string stdout "\nEXP\n";
+      Syntax.output_prog stdout e1;
+      output_string stdout "\nTYPE\n";
+      Type.output_type stdout (get_typ env e1);
+      output_string stdout "\nEND\n"; *)
+      match (get_typ env e1) with
+      | Type.Float -> FSub(e1, e2, p)
+      | _ -> Sub(e1, e2, p)
+    ) 
+  | Eq(e1, e2, p) -> Eq(deref_term env e1, deref_term env e2, p)
+  | LE(e1, e2, p) -> LE(deref_term env e1, deref_term env e2, p)
+  | FNeg(e, p) -> FNeg(deref_term env e, p)
+  | FAdd(e1, e2, p) -> FAdd(deref_term env e1, deref_term env e2, p)
+  | FSub(e1, e2, p) -> FSub(deref_term env e1, deref_term env e2, p)
+  | FMul(e1, e2, p) -> FMul(deref_term env e1, deref_term env e2, p)
+  | FDiv(e1, e2, p) -> FDiv(deref_term env  e1, deref_term env  e2, p)
+  | If(e1, e2, e3, p) -> If(deref_term env  e1, deref_term env e2, deref_term env e3, p)
+  | Let(xt, e1, e2, p) ->
+     let (x, t) = deref_id_typ xt in 
+     let env' = M.add x t env in 
+     Let(deref_id_typ xt, deref_term env e1, deref_term  env' e2, p)
   | LetRec({ name = xt; args = yts; body = e1 }, e2, p) ->
+    let (x, t) = deref_id_typ xt in
+    let env' = M.add x t env in
+    let args = List.map deref_id_typ yts in
       LetRec({ name = deref_id_typ xt;
-               args = List.map deref_id_typ yts;
-               body = deref_term e1 },
-             deref_term e2, p)
-  | App(e, es, p) -> App(deref_term e, List.map deref_term es, p)
-  | Tuple(es, p) -> Tuple(List.map deref_term es, p)
-  | LetTuple(xts, e1, e2, p) -> LetTuple(List.map deref_id_typ xts, deref_term e1, deref_term e2, p)
-  | Array(e1, e2, p) -> Array(deref_term e1, deref_term e2, p)
-  | Get(e1, e2, p) -> Get(deref_term e1, deref_term e2, p)
-  | Put(e1, e2, e3, p) -> Put(deref_term e1, deref_term e2, deref_term e3, p)
+               args = args;
+               body = deref_term (M.add_list args env') e1 },
+             deref_term env' e2, p)
+  | App(e, es, p) -> App(deref_term env e, List.map (deref_term env) es, p)
+  | Tuple(es, p) -> Tuple(List.map (deref_term env) es, p)
+  | LetTuple(xts, e1, e2, p) -> 
+    let xts' = List.map deref_id_typ xts in
+    LetTuple(xts', deref_term env e1, deref_term (M.add_list xts' env) e2, p)
+  | Array(e1, e2, p) -> Array(deref_term env e1, deref_term env e2, p)
+  | Get(e1, e2, p) -> Get(deref_term env e1, deref_term env e2, p)
+  | Put(e1, e2, e3, p) -> Put(deref_term env e1, deref_term env e2, deref_term env e3, p)
   | e -> e
 
-
-let counter = ref 0
-(* 
-    引数の型のリストtsと式の型eを受け取って, Type.FunCurry(t1, (Type.FunCurry(t2, ...(Type.FunCurry(tn,g (M.add_list yts env) e1) )))) という入れ子の関数の型を定義する.
-    この際, 同じ関数をカリー化した式かどうか判別するための番号がcounterである.
-*)
-let seq ts e = 
-    incr counter;
-    List.fold_right (fun t e -> Type.FunCurry(t, e, !counter)) ts e
-
-
-
-let rec occur r1 = (* occur check *)
+and occur r1 = (* occur check *)
 (* 
     与えられた2つの型r1, r2に対して, 一方が他方に含まれているか否かをbool値で返す.
 
@@ -213,7 +241,7 @@ let rec occur r1 = (* occur check *)
   | Type.Var({ contents = Some(t2) }) -> occur r1 t2
   | _ -> false
 
-let rec unify p t1 t2 = (* 型が合うように、型変数への代入をする *)
+and unify p t1 t2 = (* 型が合うように、型変数への代入をする *)
 (* 
     与えられた2つの型t1, t2が等しいかどうかをチェックしていき, 一方が未定義の型変数Type.Var(ref None)であったら他方と等しくなるように代入を行う.
     ただし, このときに一方の型変数が他方に含まれていないことを確認する(occur check).
@@ -248,7 +276,7 @@ let rec unify p t1 t2 = (* 型が合うように、型変数への代入をする *)
       r2 := Some(t1)
   | _, _ -> raise (Unify(t1, t2, p))
 
-let rec g env e = (* 型推論ルーチン *)
+and g env e = (* 型推論ルーチン *)
 (* 
     型環境envの下で式eの型を推論した結果を返す.
     また, 式中に出てくる変数の型があっているかどうかも調べる.
@@ -349,31 +377,18 @@ let rec g env e = (* 型推論ルーチン *)
         unify p Type.Int (g env e2);
         Type.Unit
   with 
-    | Unify(t1, t2, p) -> raise (Error(deref_term e, deref_typ t1, deref_typ t2, p))
-    | Error(e, t1, t2, p) -> raise (Error(deref_term e, deref_typ t1, deref_typ t2, p))
+    | Unify(t1, t2, p) -> raise (Error(deref_term env e, deref_typ t1, deref_typ t2, p))
+    | Error(e, t1, t2, p) -> raise (Error(deref_term env e, deref_typ t1, deref_typ t2, p))
 
-let rec make_abst_args acc = function
-| Type.FunCurry(t1, t2, n) -> make_abst_args (acc @ [(Id.genid "abst_args", t1)]) t2
-| _ -> acc
 
-(* 型tfの関数fに型tesの引数esを適用したときの適用後の型を返す関数 *)
-(* let rec get_typ_app' tf tes n = 
-    match tes with
-    | [] -> tf (* tesが空リストだったら, tfが返り値の型 *)
-    | th :: tt -> (* tesが空リストではないとき *)
-        (
-            match tf with
-            | Type.FunCurry(t1, t2, m) when t1 = th && m = n -> get_typ_app' t2 tt m (* tfがFunCurryで, tfをラップしていたFunCurryと同じ関数をカリー化したもの(m=n)だったらt2に対して再帰的にttを適用 *)
-            | _ -> Type.output_type stdout tf; List.iter (fun e -> Type.output_type stdout e) tes; raise AppError (* それ以外は与えた引数の数が, 関数の実引数よりも多いのでエラー *)
-        ) *)
 
-let same_funcurry s t = 
+and same_funcurry s t = 
     match s, t with
     | Type.FunCurry(s1, s2, _), Type.FunCurry(t1, t2, _) when s1 = t1 && s2 = t2 -> true
     | _ -> false
 
 (* get_typ_app'のトップレベル関数 *)
-let rec get_typ_app tf tes = 
+and get_typ_app tf tes = 
     match tes with
     | [] -> tf
     | th :: tt -> 
@@ -383,7 +398,7 @@ let rec get_typ_app tf tes =
             | _ -> output_string stdout "TF:\n"; Type.output_type stdout tf; output_string stdout "\nTES:\n"; List.iter (fun e -> Type.output_type stdout e) tes; raise AppError
         )
 (* 型環境envの元で, 式eの型を返す *)
-let rec get_typ env = function
+and get_typ env = function
 | Unit(p) -> Type.Unit
 | Bool(_, p) -> Type.Bool
 | Int(_, p) -> Type.Int
@@ -488,7 +503,7 @@ let f e =
     | Unify _ -> failwith "top level does not have type unit"
     | Error (_, _, _, p) -> print_newline (); failwith (Printf.sprintf "top level Error in line %d" p));
   extenv := M.map deref_typ !extenv;
-  let e' = deref_term e in 
+  let e' = deref_term M.empty e in 
   let e' = eta M.empty e' in
   (* Syntax.output_prog stdout e'; *)
   extenv := uncurry_env !extenv;

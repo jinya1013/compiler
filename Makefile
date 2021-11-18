@@ -29,7 +29,7 @@ simm.mli simm.ml regAlloc.mli regAlloc.ml emit.mli emit.ml \
 main.mli main.ml 
 
 # ↓テストプログラムが増えたら、これも増やす
-TESTS = poly \
+TESTS = non-poly poly \
 partial_apply \
 print sum-tail gcd sum fib ack even-odd \
 adder funcomp cls-rec cls-bug cls-bug2 cls-reg-bug \
@@ -38,7 +38,7 @@ join-reg join-reg2 non-tail-if non-tail-if2 \
 inprod inprod-rec inprod-loop matmul matmul-flat \
 manyargs myfib
 
-do_test: $(TESTS:%=test/%.cmp)
+do_test: $(TESTS:%=test/%.res)
 
 .PRECIOUS: test/%.s test/% test/%.res test/%.ans test/%.cmp
 TRASH = $(TESTS:%=test/%.s) $(TESTS:%=test/%) $(TESTS:%=test/%.res) $(TESTS:%=test/%.ans) $(TESTS:%=test/%.cmp)
