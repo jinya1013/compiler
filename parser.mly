@@ -30,8 +30,10 @@ let addtyp x = (x, Type.gentyp ())
 %token REC
 %token COMMA
 %token ARRAY_CREATE
+%token FUN
 %token DOT
 %token LESS_MINUS
+%token MINUS_GREATER
 %token SEMICOLON
 %token LPAREN
 %token RPAREN
@@ -40,6 +42,7 @@ let addtyp x = (x, Type.gentyp ())
 /* (* 優先順位とassociativityの定義（低い方から高い方へ） (caml2html: parser_prior) *) */
 %nonassoc IN
 %right prec_let
+%right MINUS_GREATER FUN
 %right SEMICOLON
 %right prec_if
 %right LESS_MINUS
@@ -136,6 +139,11 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
 | ARRAY_CREATE simple_exp simple_exp
     %prec prec_app
     { Array($2, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
+| FUN formal_args MINUS_GREATER exp
+    { let x = Id.genid "fun_abst" in 
+        LetRec({ name = (x, Type.gentyp()); args = $2; body = $4 }, 
+        Var(x, (Parsing.symbol_start_pos ()).pos_lnum), 
+        (Parsing.symbol_start_pos ()).pos_lnum) }
 | error
     { failwith
         (Printf.sprintf "parse error near characters %d-%d in line %d-%d"

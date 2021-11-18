@@ -56,6 +56,7 @@ let rec id_of_typ = function
   | Type.Int -> "i"
   | Type.Float -> "d"
   | Type.Fun _ -> "f"
+  | Type.FunCurry _ -> "fc"
   | Type.Tuple _ -> "t"
   | Type.Array _ -> "a" 
   | Type.Var _ -> assert false
@@ -75,7 +76,7 @@ let output_id_list outchan is =
       output_string outchan ", ";
       output_id outchan i in
     output_id outchan (List.hd is);
-    List.iter f is
+    List.iter f (List.tl is)
   )
 
 let output_label outchan = function

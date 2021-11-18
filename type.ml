@@ -3,6 +3,7 @@ type t = (* MinCamlの型を表現するデータ型 (caml2html: type_t) *)
   | Bool
   | Int
   | Float
+  | FunCurry of t * t * int (* arguments are curried *)
   | Fun of t list * t (* arguments are uncurried *)
   | Tuple of t list
   | Array of t
@@ -16,19 +17,47 @@ let rec output_type outchan s =
   | Bool -> output_string outchan "Bool"
   | Int -> output_string outchan "Int"
   | Float -> output_string outchan "Float"
-  | Fun(ts, t) -> 
+  | FunCurry(t1, t2, n) -> 
   (
-    output_string outchan "Fun( ";
-    output_type_list outchan ts;
-    output_string outchan ", ";
-    output_type outchan t;
-    output_string outchan " )"
+    output_string outchan " FunCurry";
+    output_string outchan (string_of_int n);
+    output_string outchan " (";
+    output_type outchan t1; 
+    output_string outchan " -> ";
+    output_type outchan t2;
+    output_string outchan ")";
+  )
+  | Fun(t1s, t2) -> 
+  (
+    output_string outchan " Fun ( ";
+    (
+      match t1s with
+      | [t] -> output_type outchan t;
+      | th :: tt ->
+      (
+        output_string outchan "( ";
+        output_type outchan th;
+        List.iter (fun t -> output_string outchan ", "; output_type outchan t) tt; 
+        output_string outchan " )";
+      )
+      | _ -> ()
+    );
+    output_string outchan " -> ";
+    output_type outchan t2;
+    output_string outchan " )";
   )
   | Tuple(ts) -> 
   (
-    output_string outchan "( ";
-    output_type_list outchan ts;
-    output_string outchan " )"
+    match ts with
+    | th :: tt -> 
+    (
+      output_string outchan "( ";
+      output_type outchan th;
+      List.iter (fun t -> output_string outchan " * "; output_type outchan t) tt;
+      output_string outchan " )";
+
+    )
+    | _ -> ()
   )
   | Array(t) ->
   (
@@ -39,7 +68,11 @@ let rec output_type outchan s =
   | Var(tref) ->
   (
     output_string outchan "Var( ";
-    output_type outchan (Option.get !tref);
+    (
+      match  !tref with
+    | None -> output_string outchan "None"
+    | Some(x) -> output_type outchan x
+    );
     output_string outchan " )";
   )
   and output_type_list outchan ts = 

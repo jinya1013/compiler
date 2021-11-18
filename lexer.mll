@@ -70,6 +70,10 @@ rule token = parse
     { IN }
 | "rec"
     { REC }
+| "fun"
+    { FUN }
+| "->"
+    { MINUS_GREATER }
 | ','
     { COMMA }
 | '_'
