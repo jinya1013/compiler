@@ -8,6 +8,7 @@ exception Error of t * Type.t * Type.t * Syntax.pos
 exception AppError
 exception UncurryError
 exception UndefinedVarError
+exception IntFloatError
 
 let extenv = ref M.empty
 
@@ -131,7 +132,7 @@ let rec deref_id_typ (x, t) =
 *)
     (x, deref_typ t)
 
-let rec deref_term = 
+let rec deref_term env = 
 (* 
     式e中に現れる型に対して, 型変数をその参照先で置き換える変換を再帰的に行う.
 
@@ -145,9 +146,15 @@ let rec deref_term =
 
 *)
     function
-  | Not(e, p) -> Not(deref_term e, p)
-  | Neg(e, p) -> Neg(deref_term e, p)
-  | Add(e1, e2, p) -> Add(deref_term e1, deref_term e2, p)
+  | Not(e, p) -> Not(deref_term env e, p)
+  | Neg(e, p) -> Neg(deref_term env e, p)
+  | Add(e1, e2, p) -> 
+  (
+      let e1 = deref_term env e1 in
+      let e2 = deref_team env e2 in
+      let t1 = get_typ 
+      Add(deref_term e1, deref_term e2, p)
+  )
   | Sub(e1, e2, p) -> Sub(deref_term e1, deref_term e2, p)
   | Eq(e1, e2, p) -> Eq(deref_term e1, deref_term e2, p)
   | LE(e1, e2, p) -> LE(deref_term e1, deref_term e2, p)
@@ -270,9 +277,24 @@ let rec g env e = (* 型推論ルーチン *)
         unify p Type.Int (g env e);
         Type.Int
     | Add(e1, e2, p) | Sub(e1, e2, p) -> (* 足し算（と引き算）の型推論 *)
-        unify p Type.Int (g env e1);
-        unify p Type.Int (g env e2);
-        Type.Int
+        let backup = !extenv in
+        (
+            try 
+        (
+            unify p Type.Int (g env e1);
+            unify p Type.Int (g env e2);
+            Type.Int
+        )
+        with _ -> (
+            try 
+            (
+                extenv := backup;
+                unify p Type.Float (g env e1);
+                unify p Type.Float (g env e2);
+                Type.Float
+            )
+            with _ -> raise IntFloatError)
+        )
     | FNeg(e, p) ->
         unify p Type.Float (g env e);
         Type.Float
@@ -468,6 +490,6 @@ let f e =
   extenv := M.map deref_typ !extenv;
   let e' = deref_term e in 
   let e' = eta M.empty e' in
-  Syntax.output_prog stdout e';
+  (* Syntax.output_prog stdout e'; *)
   extenv := uncurry_env !extenv;
   uncurry_term e'
