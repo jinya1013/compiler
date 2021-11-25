@@ -16,6 +16,7 @@ let rec kernel_cos t =
   1.0 -. c2 *. t *. t +. c4 *. t *. t *. t *. t -. c6 *. t *. t *. t *. t *. t *. t
 in
 
+
 let rec sin_h t flg = 
   if t >= pi_4 then flg *. (kernel_sin (pi_2 -. t))
   else flg *. (kernel_sin t)
@@ -58,28 +59,4 @@ let rec cos t =
   else 1.0
 in
 
-let a3 = 0.3333333 in
-let a5 = 0.2 in
-let a7 = 0.142857142 in
-let a9 = 0.111111104 in
-let a11 = 0.08976446 in
-let a13 = 0.060035485
-in
-
-let rec kernel_atan t = 
-  t -. a3 *. t *. t *. t +. a5 *. t *. t *. t *. t *. t -. a7 *. t *. t *. t *. t *. t *. t *. t +. a9 *. t *. t *. t *. t *. t *. t *. t *. t *. t -. a11 *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t +. a13 *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t
-in
-
-let a_thr1 = 2.4375 in
-let a_thr2 = 0.4375 in
-
-let rec atan_f t flg  =
-  if t > a_thr1 = flg *. (pi_2 -. kernel_atan (1 /. t))
-  else if (t >= a_thr2) && (t < a_thr1) then flg *. (pi_4 +.  kernel_atan ((t -. 1.0) /. (t +. 1.0)))
-  else flg *. (kernel_atan t)
-in
-
-let rec atan t = 
-  if t > 0.0 then atan_f t 1.0
-  else if t < 0.0 then atan_f (-1.0 * t) (-1.0)
-  else 0.0
+let x = cos 10.0 in ()

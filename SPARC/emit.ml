@@ -438,19 +438,17 @@ Format.eprintf "generating assembly...@.";
 Printf.fprintf oc "float_table:\t\n";
 List.iter
   (fun (offset, d) -> 
-  let bof = Int32.bits_of_float d in (* 浮動小数をbit表現に変換 *)
-  let l11_0 = Int32.logand (Int32.of_string "0xfff") bof in
-  let m23_12 = Int32.logand (Int32.of_string "0xfff") (Int32.shift_right_logical bof 12) in
-  let h31_24 = Int32.logand (Int32.of_string "0xfff") (Int32.shift_right_logical bof 24) in
-  Printf.fprintf oc "\taddi\t%%x1 %%x0 %ld\n" h31_24;
-  Printf.fprintf oc "\taddi\t%%x2 %%x0 8\n";
-  Printf.fprintf oc "\taddi\t%%x3 %%x0 12\n";
-  Printf.fprintf oc "\tsll\t%%x1 %%x1 %%x2\n";
-  Printf.fprintf oc "\taddi\t%%x1 %%x1 %ld\n" m23_12;
-  Printf.fprintf oc "\tsll\t%%x1 %%x1 %%x3\n";
-  Printf.fprintf oc "\taddi\t%%x1 %%x1 %ld\n" l11_0;
-  Printf.fprintf oc "\taddi\t%%x1 %%x1 %ld\n" l11_0;
-  Printf.fprintf oc "\tfsw\t%%x1 %d(%s)\n" offset reg_ftp;
+  let bof = Int32.bits_of_float d in (* 64ビット浮動小数を32bit表現に変換 *)
+  let l11_0 = Int32.logand (Int32.of_string "0xfff") bof in (* 下位12ビット *)
+  let m23_12 = Int32.logand (Int32.of_string "0xfff") (Int32.shift_right_logical bof 12) in (* 真ん中12ビット *)
+  let h31_24 = Int32.logand (Int32.of_string "0xff") (Int32.shift_right_logical bof 24) in (* 上位8ビット *)
+  Printf.fprintf oc "\taddi\t%%x1 %%x0 %ld\n" h31_24; (* 上位8ビットを%x1に入れる *)
+  Printf.fprintf oc "\taddi\t%%x2 %%x0 12\n"; (* 12 を%x2に入れる *)
+  Printf.fprintf oc "\tsll\t%%x1 %%x1 %%x2\n"; (* %x1を12ビットだけ左シフト *)
+  Printf.fprintf oc "\taddi\t%%x1 %%x1 %ld\n" m23_12; (* 真ん中12ビットを%x1に入れる *)
+  Printf.fprintf oc "\tsll\t%%x1 %%x1 %%x2\n"; (* %x1を12ビットだけ左シフト *)
+  Printf.fprintf oc "\taddi\t%%x1 %%x1 %ld\n" l11_0; (* 下位12ビットを%x1に入れる *)
+  Printf.fprintf oc "\tsw\t%%x1 %d(%s)\n" offset reg_ftp;
   )
   data;
 List.iter (fun fundef -> h oc fundef) fundefs;
