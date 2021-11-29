@@ -151,7 +151,7 @@ let h { Closure.name = (Id.L(x), t); Closure.args = yts; Closure.formal_fv = zts
   let p = Closure.pos_of_t e in (* 関数のボディ部分が元々のコードのどの部分に対応するか *)
   let (int, float) = separate yts in (* 関数の引数を型に応じてintとfloatに分割する *)
 
-  (* クロージャから関数名や引数, 自由変数をレジスタに写す. *)
+  (* クロージャから関数名や引数, 自由変数をレジスタに移す. *)
   let (offset, load) =
     expand
       zts (* クロージャ中の自由変数の集合の, (変数名, 型)のリストに対して *)

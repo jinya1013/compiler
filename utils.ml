@@ -73,13 +73,14 @@ in
 let a_thr1 = 2.4375 in
 let a_thr2 = 0.4375 in
 
-let rec atan_f t flg  =
-  if t > a_thr1 = flg *. (pi_2 -. kernel_atan (1 /. t))
-  else if (t >= a_thr2) && (t < a_thr1) then flg *. (pi_4 +.  kernel_atan ((t -. 1.0) /. (t +. 1.0)))
+let rec atan_f t flg = 
+  if t > a_thr1 then flg *. (pi_2 -. kernel_atan (1.0 /. t))
+  else if t >= a_thr2 then
+  (if t < a_thr1 then flg *. (pi_4 +.  kernel_atan ((t -. 1.0) /. (t +. 1.0))) else flg *. (kernel_atan t))
   else flg *. (kernel_atan t)
 in
 
 let rec atan t = 
   if t > 0.0 then atan_f t 1.0
-  else if t < 0.0 then atan_f (-1.0 * t) (-1.0)
+  else if t < 0.0 then atan_f (-1.0 *. t) (-1.0)
   else 0.0

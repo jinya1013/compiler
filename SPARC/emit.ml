@@ -1,7 +1,7 @@
 open Asm
 
-external gethi : float -> int32 = "gethi"
-external getlo : float -> int32 = "getlo"
+let inst_address = ref 4
+let address_env = ref []
 
 let stackset = ref S.empty (* すでにSaveされた変数の集合 (caml2html: emit_stackset) *)
 let stackmap = ref [] (* Saveされた変数の、スタックにおける位置 (caml2html: emit_stackmap) *)
@@ -72,70 +72,71 @@ let rec g oc = function (* 命令列のアセンブリ生成 (caml2html: emit_g) *)
 and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   (* 末尾でなかったら計算結果をdestにセット (caml2html: emit_nontail) *)
   | NonTail(_), Nop -> ()
-  | NonTail(x), Set(i) -> Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x i p
-  | NonTail(x), SetL(Id.L(y)) -> Printf.fprintf oc "\taddi\t%s %%x0 %s\t# %d \n" x y p
+  | NonTail(x), Set(i) -> inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x i p
+  | NonTail(x), SetL(Id.L(y)) -> inst_address := !inst_address + 4;
+  Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x (List.assoc (Id.L(y)) !address_env) p
   | NonTail(x), Mov(y) when x = y -> ()
-  | NonTail(x), Mov(y) -> Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" x y p
-  | NonTail(x), Neg(y) -> Printf.fprintf oc "\tsub\t%s %%x0 %s\t# %d \n" x y p
+  | NonTail(x), Mov(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" x y p
+  | NonTail(x), Neg(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tsub\t%s %%x0 %s\t# %d \n" x y p
   | NonTail(x), Add(y, z') -> 
   (
     match z' with 
-    | V(v) -> Printf.fprintf oc "\tadd\t%s %s %s\t# %d \n" x y (pp_id_or_imm z') p
-    | C(c) -> Printf.fprintf oc "\taddi\t%s %s %s\t# %d \n" x y (pp_id_or_imm z') p
+    | V(v) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tadd\t%s %s %s\t# %d \n" x y (pp_id_or_imm z') p
+    | C(c) -> inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s %s\t# %d \n" x y (pp_id_or_imm z') p
   )
   | NonTail(x), Sub(y, z') -> 
   (
     match z' with 
-    | V(v) -> Printf.fprintf oc "\tsub\t%s %s %s\t# %d \n" x y (np_id_or_imm z') p
-    | C(c) -> Printf.fprintf oc "\taddi\t%s %s %s\t# %d \n" x y (np_id_or_imm z') p
+    | V(v) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tsub\t%s %s %s\t# %d \n" x y (np_id_or_imm z') p
+    | C(c) -> inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s %s\t# %d \n" x y (np_id_or_imm z') p
   )
-  | NonTail(x), SLL(y, z') -> Printf.fprintf oc "\tsll\t%s %s %s\t# %d \n" x y (pp_id_or_imm z') p
-  | NonTail(x), Ld(y, z') -> Printf.fprintf oc "\tlw\t%s %s(%s)\t# %d \n" x (pp_id_or_imm z') y p
-  | NonTail(_), St(x, y, z') -> Printf.fprintf oc "\tsw\t%s %s(%s)\t# %d \n" x (pp_id_or_imm z') y p
+  | NonTail(x), SLL(y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tsll\t%s %s %s\t# %d \n" x y (pp_id_or_imm z') p
+  | NonTail(x), Ld(y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s %s(%s)\t# %d \n" x (pp_id_or_imm z') y p
+  | NonTail(_), St(x, y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s %s(%s)\t# %d \n" x (pp_id_or_imm z') y p
 
   | NonTail(x), FMovD(y) when x = y -> ()
   | NonTail(x), FMovD(y) ->
-      Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_fsw p;  (* 浮動小数の0を用意 *)
-      Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" x y reg_fsw p; (* f0とyの和をxに入れる *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_fsw p;  (* 浮動小数の0を用意 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" x y reg_fsw p; (* f0とyの和をxに入れる *)
   | NonTail(x), FNegD(y) ->
-      Printf.fprintf oc "\tfnegs\t%s %s\t# %d \n" x y p;
-  | NonTail(x), FAddD(y, z) -> Printf.fprintf oc "\tfaddd\t%s %s %s\t# %d \n" x y z p
-  | NonTail(x), FSubD(y, z) -> Printf.fprintf oc "\tfsubd\t%s %s %s\t# %d \n" x y z p
-  | NonTail(x), FMulD(y, z) -> Printf.fprintf oc "\tfmuld\t%s %s %s\t# %d \n" x y z p
-  | NonTail(x), FDivD(y, z) -> Printf.fprintf oc "\tfdivd\t%s %s %s\t# %d \n" x y z p
-  | NonTail(x), LdDF(y, z') -> Printf.fprintf oc "\tlw\t%s (%s)%s\t# %d \n" x (pp_id_or_imm z') y p
-  | NonTail(_), StDF(x, y, z') -> Printf.fprintf oc "\tsw\t%s (%s)%s\t# %d \n\n" x (pp_id_or_imm z') y p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfneg\t%s %s\t# %d \n" x y p;
+  | NonTail(x), FAddD(y, z) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" x y z p
+  | NonTail(x), FSubD(y, z) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tfsub\t%s %s %s\t# %d \n" x y z p
+  | NonTail(x), FMulD(y, z) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tfmul\t%s %s %s\t# %d \n" x y z p
+  | NonTail(x), FDivD(y, z) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tfdiv\t%s %s %s\t# %d \n" x y z p
+  | NonTail(x), LdDF(y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tflw\t%s %s(%s)\t# %d \n" x (pp_id_or_imm z') y p
+  | NonTail(_), StDF(x, y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tfsw\t%s %s(%s)\t# %d \n" x (pp_id_or_imm z') y p
 
-  | NonTail(_), Comment(s) -> Printf.fprintf oc "\t# %s\t# %d \n" s p
+  | NonTail(_), Comment(s) -> inst_address := !inst_address + 4;Printf.fprintf oc "\t# %s\t# %d \n" s p
 
   (* 退避の仮想命令の実装 (caml2html: emit_save) *)
   | NonTail(_), Save(x, y) when List.mem x allregs && not (S.mem y !stackset) -> (* 整数レジスタxに入っている変数yをスタックに退避 *)
       save y; (* コンパイラの内部情報を更新(yをスタックにのっける) *)
-      Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
   | NonTail(_), Save(x, y) when List.mem x allfregs && not (S.mem y !stackset) ->
       savef y;
-      Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfsw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
   | NonTail(_), Save(x, y) -> assert (S.mem y !stackset); () (* 上記2つ以外はエラー *)
 
   (* 復帰の仮想命令の実装 (caml2html: emit_restore) *)
   | NonTail(x), Restore(y) when List.mem x allregs -> 
-      Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
   | NonTail(x), Restore(y) ->
       assert (List.mem x allfregs);
-      Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tflw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
   (* 末尾だったら計算結果を第一レジスタにセットしてリターン (caml2html: emit_tailret) *) (* 返り値がない命令 *)
   | Tail, (Nop | St _ | StDF _ | Comment _ | Save _ as exp) ->
       g' p oc (NonTail(Id.gentmp Type.Unit), exp);
-      Printf.fprintf oc "\tjr\t0(%%x1)\t# %d \n" p;
-      Printf.fprintf oc "\tnop\t# %d \n" p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tjr\t0(%%x1)\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p
   | Tail, (Set _ | SetL _ | Mov _ | Neg _ | Add _ | Sub _ | SLL _ | Ld _ as exp) ->
       g' p oc (NonTail(regs.(0)), exp);
-      Printf.fprintf oc "\tjr\t0(%%x1)\t# %d \n" p;
-      Printf.fprintf oc "\tnop\t# %d \n" p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tjr\t0(%%x1)\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p
   | Tail, (FMovD _ | FNegD _ | FAddD _ | FSubD _ | FMulD _ | FDivD _ | LdDF _ as exp) ->
       g' p oc (NonTail(fregs.(0)), exp);
-      Printf.fprintf oc "\tjr\t0(%%x1)\t# %d \n" p;
-      Printf.fprintf oc "\tnop\t# %d \n" p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tjr\t0(%%x1)\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p
 
 
 
@@ -147,21 +148,21 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
         | _ -> assert false
       );
 
-      Printf.fprintf oc "\tjr\t0(%%x1)\t# %d \n" p;
-      Printf.fprintf oc "\tnop\t# %d \n" p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tjr\t0(%%x1)\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p
 
   | Tail, IfEq(x, y', e1, e2) ->
       let b_else = Id.genid ("beq_else") in
       (
         match y' with
-        | V(y) -> Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x y b_else p; (* (x - 1 < y　なら飛ぶ) *)
+        | V(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x y b_else p; (* (x - 1 < y　なら飛ぶ) *)
         | C(i) -> 
         (
-          Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
-          Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x reg_sw b_else p
+          inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x reg_sw b_else p
         )
       );
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (Tail, e1);
       Printf.fprintf oc "%s:\t# %d \n" b_else p;
@@ -169,36 +170,35 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       g oc (Tail, e2)
   | Tail, IfLE(x, y', e1, e2) ->
       let b = Id.genid ("blt") in
-      Printf.fprintf oc "\taddi\t%s %s -1\t# %d \n" x x p;
       (
         match y' with
-        | V(y) -> Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x y b p; (* (x - 1 < y　なら飛ぶ) *)
+        | V(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" y x b p; (* (y < x　なら飛ぶ) *)
         | C(i) -> 
         (
-          Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
-          Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x reg_sw b p
+          inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x reg_sw b p
         )
       );
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
-      Printf.fprintf oc "\taddi\t%s %s 1\t# %d \n" x x p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s 1\t# %d \n" x x p;
       g oc (Tail, e2);
       Printf.fprintf oc "%s:\t# %d \n" b p;
       stackset := stackset_back;
-      Printf.fprintf oc "\taddi\t%s %s 1\t# %d \n" x x p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s 1\t# %d \n" x x p;
       g oc (Tail, e1)
   | Tail, IfGE(x, y', e1, e2) ->
       let b_else = Id.genid ("bge_else") in
       (
         match y' with
-        | V(y) -> Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x y b_else p; (* (x - 1 < y　なら飛ぶ) *)
+        | V(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x y b_else p; (* (x - 1 < y　なら飛ぶ) *)
         | C(i) -> 
         (
-          Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
-          Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x reg_sw b_else p
+          inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x reg_sw b_else p
         )
       );
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (Tail, e1);
       Printf.fprintf oc "%s:\t# %d \n" b_else p;
@@ -207,18 +207,19 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
 
   (* Risc-Vでは浮動小数の比較演算が見つからなかったので, 暫定的 *)
   | Tail, IfFEq(x, y, e1, e2) ->
-      let b = Id.genid ("fbeq") in
-      Printf.fprintf oc "\tfbeq\t%s %s %s\t# %d \n" x y b p;
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      let b = Id.genid ("feq") in
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfeq\t%s %s %s\t# %d \n" x y b p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (Tail, e2);
       Printf.fprintf oc "%s:\t# %d \n" b p;
       stackset := stackset_back;
       g oc (Tail, e1)
   | Tail, IfFLE(x, y, e1, e2) ->
-      let b = Id.genid ("fblt") in
-      Printf.fprintf oc "\tfblt\t%s %s %s\t# %d \n" x y b p;
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      let b = Id.genid ("fle_else") in
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (Tail, e2);
       Printf.fprintf oc "%s:\t# %d \n" b p;
@@ -230,19 +231,19 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       let dest = NonTail(z) in
       (
         match y' with
-        | V(y) -> Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x y b_else p; (* (x - 1 < y　なら飛ぶ) *)
+        | V(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x y b_else p; (* (x - 1 < y　なら飛ぶ) *)
         | C(i) -> 
         (
-          Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
-          Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x reg_sw b_else p
+          inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x reg_sw b_else p
         )
       );
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (dest, e1);
       let stackset1 = !stackset in
-      Printf.fprintf oc "\tj\t%s\t# %d \n" b_cont p;
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tj\t%s\t# %d \n" b_cont p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       Printf.fprintf oc "%s:\t# %d \n" b_else p;
       stackset := stackset_back;
       g oc (dest, e2);
@@ -253,26 +254,26 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       let b = Id.genid ("blt") in
       let b_cont = Id.genid ("blt_cont") in
       let dest = NonTail(z) in
-      Printf.fprintf oc "\taddi\t%s %s -1\t# %d \n" x x p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s -1\t# %d \n" x x p;
       (
         match y' with
-        | V(y) -> Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x y b p; (* (x - 1 < y　なら飛ぶ) *)
+        | V(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x y b p; (* (x - 1 < y　なら飛ぶ) *)
         | C(i) -> 
         (
-          Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
-          Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x reg_sw b p
+          inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x reg_sw b p
         )
       );
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
-      Printf.fprintf oc "\taddi\t%s %s 1\t# %d \n" x x p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s 1\t# %d \n" x x p;
       g oc (dest, e2);
       let stackset1 = !stackset in
-      Printf.fprintf oc "\tj\t%s\t# %d \n" b_cont p;
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tj\t%s\t# %d \n" b_cont p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       Printf.fprintf oc "%s:\t# %d \n" b p;
       stackset := stackset_back;
-      Printf.fprintf oc "\taddi\t%s %s 1\t# %d \n" x x p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s 1\t# %d \n" x x p;
       g oc (dest, e1);
       Printf.fprintf oc "%s:\t# %d \n" b_cont p;
       let stackset2 = !stackset in
@@ -283,19 +284,19 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       let dest = NonTail(z) in
       (
         match y' with
-        | V(y) -> Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x y b_else p; (* (x - 1 < y　なら飛ぶ) *)
+        | V(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x y b_else p; (* (x - 1 < y　なら飛ぶ) *)
         | C(i) -> 
         (
-          Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
-          Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x reg_sw b_else p
+          inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x reg_sw b_else p
         )
       );
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (dest, e1);
       let stackset1 = !stackset in
-      Printf.fprintf oc "\tj\t%s\t# %d \n" b_cont p;
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tj\t%s\t# %d \n" b_cont p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       Printf.fprintf oc "%s:\t# %d \n" b_else p;
       stackset := stackset_back;
       g oc (dest, e2);
@@ -304,16 +305,16 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       stackset := S.inter stackset1 stackset2
 
   | NonTail(z), IfFEq(x, y, e1, e2) ->
-      let b = Id.genid ("fbeq") in
-      let b_cont = Id.genid ("fbeq_cont") in
+      let b = Id.genid ("feq") in
+      let b_cont = Id.genid ("feq_cont") in
       let dest = NonTail(z) in
-      Printf.fprintf oc "\tfbeq\t%s %s %s\t# %d \n" x y b p;
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfeq\t%s %s %s\t# %d \n" x y b p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (dest, e2);
       let stackset1 = !stackset in
-      Printf.fprintf oc "\tj\t%s\t# %d \n" b_cont p;
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tj\t%s\t# %d \n" b_cont p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       Printf.fprintf oc "%s:\t# %d \n" b p;
       stackset := stackset_back;
       g oc (dest, e1);
@@ -321,16 +322,17 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       let stackset2 = !stackset in
       stackset := S.inter stackset1 stackset2
   | NonTail(z), IfFLE(x, y, e1, e2) ->
-      let b = Id.genid ("fblt") in
-      let b_cont = Id.genid ("fblt_cont") in
+      let b = Id.genid ("fle") in
+      let b_cont = Id.genid ("fle_cont") in
       let dest = NonTail(z) in
-      Printf.fprintf oc "\tfblt\t%s %s %s\t# %d \n" x y b p;
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (dest, e2);
       let stackset1 = !stackset in
-      Printf.fprintf oc "\tj\t%s\t# %d \n" b_cont p;
-      Printf.fprintf oc "\tnop\t# %d \n" p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tj\t%s\t# %d \n" b_cont p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       Printf.fprintf oc "%s:\t# %d \n" b p;
       stackset := stackset_back;
       g oc (dest, e1);
@@ -341,51 +343,51 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   (* 関数呼び出しの仮想命令の実装 (caml2html: emit_call) *)
   | Tail, CallCls(x, ys, zs) -> (* 末尾呼び出し (caml2html: emit_tailcall) *) (* x : 関数の名前, ys : 整数引数, zs : 浮動小数引数 *)
       g'_args oc [(x, reg_cl)] ys zs p;
-      Printf.fprintf oc "\tlw\t%s 0(%s)\t# %d \n" reg_sw reg_cl p; (* クロージャレジスタが指すクロージャ先頭のアドレスをスワップレジスタに移動させる *)
-      Printf.fprintf oc "\tjr\t0(%s)\t# %d \n" reg_sw p;
-      Printf.fprintf oc "\tnop\t# %d \n" p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s 0(%s)\t# %d \n" reg_sw reg_cl p; (* クロージャレジスタが指すクロージャ先頭のアドレスをスワップレジスタに移動させる *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tjr\t0(%s)\t# %d \n" reg_sw p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p
   | Tail, CallDir(Id.L(x), ys, zs) -> (* 末尾呼び出し *)
       g'_args oc [] ys zs p;
-      Printf.fprintf oc "\tj\t%s\t# %d \n" x p; (* ラベルxに飛ぶ *)
-      Printf.fprintf oc "\tnop\t# %d \n" p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tj\t%s\t# %d \n" x p; (* ラベルxに飛ぶ *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p
   | NonTail(a), CallCls(x, ys, zs) ->
       g'_args oc [(x, reg_cl)] ys zs p;
       let ss = stacksize () in
-      Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" reg_ra (ss - 4) reg_sp p; (* リターンアドレスの退避 *)
-      Printf.fprintf oc "\tlw\t%s 0(%s)\t# %d \n" reg_sw reg_cl p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" reg_ra (ss - 4) reg_sp p; (* リターンアドレスの退避 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s 0(%s)\t# %d \n" reg_sw reg_cl p;
     (* よくわからない *)
-      Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" reg_sp reg_sp ss p; (* レジスタ溢れによって退避する分だけスタックを拡張しておく *)
-      Printf.fprintf oc "\tjalr\t%%x1 %s\t# %d \n" reg_sw p;
-      Printf.fprintf oc "\taddi\t%s %s -%d\t# %d \n" reg_sp reg_sp ss p; (* 拡張した分を戻す *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" reg_sp reg_sp ss p; (* レジスタ溢れによって退避する分だけスタックを拡張しておく *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tjalr\t%%x1 0(%s)\t# %d \n" reg_sw p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s -%d\t# %d \n" reg_sp reg_sp ss p; (* 拡張した分を戻す *)
 
-      Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" reg_ra (ss - 4) reg_sp p;  (* リターンアドレスの復帰 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" reg_ra (ss - 4) reg_sp p;  (* リターンアドレスの復帰 *)
       if List.mem a allregs && a <> regs.(0) then (* 関数の整数返り値レジスタがreg.(0)でなければ *)
-        Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" a regs.(0) p (* reg.(0)からaにデータを移動 *)
+        (inst_address := !inst_address + 4;Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" a regs.(0) p) (* reg.(0)からaにデータを移動 *)
       else if List.mem a allfregs && a <> fregs.(0) then (* 関数の浮動小数返り値レジスタがfreg.(0)でなければ *)
         (
-          Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_fsw p;  (* 浮動小数の0を用意 *)
-          Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" a fregs.(0) reg_fsw p;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_fsw p;  (* 浮動小数の0を用意 *)
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" a fregs.(0) reg_fsw p;
         );
   | NonTail(a), CallDir(Id.L(x), ys, zs) ->
       g'_args oc [] ys zs p;
       let ss = stacksize () in
-      Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" reg_ra (ss - 4) reg_sp p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" reg_ra (ss - 4) reg_sp p;
 
     (* よくわからない *)
-      Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" reg_sp reg_sp ss p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" reg_sp reg_sp ss p;
 
-      Printf.fprintf oc "\tjal\t %%x1 %s\t# %d \n" x p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tjal\t %%x1 %s\t# %d \n" x p;
 
-      Printf.fprintf oc "\taddi\t%s %s -%d\t# %d \n" reg_sp reg_sp ss p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s -%d\t# %d \n" reg_sp reg_sp ss p;
 
 
-      Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" reg_ra (ss - 4) reg_sp p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" reg_ra (ss - 4) reg_sp p;
       if List.mem a allregs && a <> regs.(0) then
-        Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" a regs.(0) p
+        (inst_address := !inst_address + 4;Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" a regs.(0) p)
       else if List.mem a allfregs && a <> fregs.(0) then
         (
-          Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_fsw p;  (* 浮動小数の0を用意 *)
-          Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" a fregs.(0) reg_fsw p;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_fsw p;  (* 浮動小数の0を用意 *)
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" a fregs.(0) reg_fsw p;
         );
 and g'_args oc x_reg_cl ys zs p = (* x_reg_cl *)
   let (i, yrs) =
@@ -397,7 +399,7 @@ and g'_args oc x_reg_cl ys zs p = (* x_reg_cl *)
     (i, yrs) =  (len(n), [(y[n], reg[n]); ...;(y[0], reg[0]); (x, reg_cl)]). yrsは引数に渡す変数名とレジスタの組
   *)
   List.iter
-    (fun (y, r) -> Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" r y p)
+    (fun (y, r) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" r y p)
     (shuffle reg_sw yrs);
   (* 変数を関数呼び出し規約に従ったレジスタに移動させている *)
   let (d, zfrs) =
@@ -407,13 +409,14 @@ and g'_args oc x_reg_cl ys zs p = (* x_reg_cl *)
       zs in
   List.iter
     (fun (z, fr) ->
-      Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_fsw p;  (* 浮動小数の0を用意 *)
-      Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" fr z reg_fsw p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_fsw p;  (* 浮動小数の0を用意 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" fr z reg_fsw p;
     )
     (shuffle reg_fsw zfrs)
 
 let h oc { name = Id.L(x); args = _; fargs = _; body = e; ret = _ } =
-  Printf.fprintf oc "%s:\n" x;
+  address_env := (Id.L(x), !inst_address) :: !address_env;
+  Printf.fprintf oc "%s:\t# %d\n" x !inst_address;
   stackset := S.empty;
   stackmap := [];
   g oc (Tail, e)
@@ -436,23 +439,63 @@ let h oc { name = Id.L(x); args = _; fargs = _; body = e; ret = _ } =
 let f oc (Prog(data, fundefs, e)) =
 Format.eprintf "generating assembly...@.";
 Printf.fprintf oc "float_table:\t\n";
+inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%%x7 %%x0 12\n"; (* 12 を%x2に入れる *)
 List.iter
   (fun (offset, d) -> 
   let bof = Int32.bits_of_float d in (* 64ビット浮動小数を32bit表現に変換 *)
   let l11_0 = Int32.logand (Int32.of_string "0xfff") bof in (* 下位12ビット *)
-  let m23_12 = Int32.logand (Int32.of_string "0xfff") (Int32.shift_right_logical bof 12) in (* 真ん中12ビット *)
-  let h31_24 = Int32.logand (Int32.of_string "0xff") (Int32.shift_right_logical bof 24) in (* 上位8ビット *)
-  Printf.fprintf oc "\taddi\t%%x1 %%x0 %ld\n" h31_24; (* 上位8ビットを%x1に入れる *)
-  Printf.fprintf oc "\taddi\t%%x2 %%x0 12\n"; (* 12 を%x2に入れる *)
-  Printf.fprintf oc "\tsll\t%%x1 %%x1 %%x2\n"; (* %x1を12ビットだけ左シフト *)
-  Printf.fprintf oc "\taddi\t%%x1 %%x1 %ld\n" m23_12; (* 真ん中12ビットを%x1に入れる *)
-  Printf.fprintf oc "\tsll\t%%x1 %%x1 %%x2\n"; (* %x1を12ビットだけ左シフト *)
-  Printf.fprintf oc "\taddi\t%%x1 %%x1 %ld\n" l11_0; (* 下位12ビットを%x1に入れる *)
-  Printf.fprintf oc "\tsw\t%%x1 %d(%s)\n" offset reg_ftp;
+  let m23_12 = Int32.logand (Int32.of_string "0xfff") (Int32.shift_right_logical bof 12) in
+  let h31_24 = Int32.logand (Int32.of_string "0xff") (Int32.shift_right_logical bof 24) in
+
+  inst_address := !inst_address + 4;
+  Printf.fprintf oc "\taddi\t%%x6 %%x0 %ld\n" h31_24; (* 上位8ビットを%x1に入れる *)
+
+  inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%%x6 %%x6 %%x7\n"; (* %x1を12ビットだけ左シフト *)
+
+  (
+    match m23_12 with
+    | x when x > Int32.of_string "0x7ff" -> 
+      (
+        inst_address := !inst_address + 4;
+        Printf.fprintf oc "\taddi\t%%x6 %%x6 2047\n";
+        inst_address := !inst_address + 4;
+        Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" (Int32.sub m23_12 (Int32.of_string "0x7ff"));
+      )
+    | _ -> 
+      (
+        inst_address := !inst_address + 4;
+        Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" m23_12;
+      )
+  ); (* 真ん中12ビットを%x1に入れる *)
+
+  inst_address := !inst_address + 4;Printf.fprintf oc "\tsll\t%%x6 %%x6 %%x7\n"; (* %x1を12ビットだけ左シフト *)
+
+  (
+    match l11_0 with
+    | x when x > Int32.of_string "0x7ff" -> 
+      (
+        inst_address := !inst_address + 4;
+        Printf.fprintf oc "\taddi\t%%x6 %%x6 2047\n";
+        inst_address := !inst_address + 4;
+        Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" (Int32.sub l11_0 (Int32.of_string "0x7ff"));
+      )
+    | _ -> 
+      (
+        inst_address := !inst_address + 4;
+        Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" l11_0;
+      )
+  ); (* 下位12ビットを%x1に入れる *)
+
+  inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%%x6 %d(%s)\n" offset reg_ftp;
   )
   data;
+inst_address := !inst_address + 4;
+Printf.fprintf oc "\tj\tmin_caml_start\n";
 List.iter (fun fundef -> h oc fundef) fundefs;
 Printf.fprintf oc "min_caml_start:\n";
+inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x4 %%x0 1000\n";
+inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x3 %%x4 1000\n";
+
 stackset := S.empty;
 stackmap := [];
 g oc (NonTail("%%x0"), e);
