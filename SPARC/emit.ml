@@ -1,6 +1,6 @@
 open Asm
 
-let inst_address = ref 4
+let inst_address = ref (4 + 110 * 4)
 let address_env = ref []
 
 let stackset = ref S.empty (* すでにSaveされた変数の集合 (caml2html: emit_stackset) *)
@@ -73,8 +73,23 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   (* 末尾でなかったら計算結果をdestにセット (caml2html: emit_nontail) *)
   | NonTail(_), Nop -> ()
   | NonTail(x), Set(i) -> inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x i p
-  | NonTail(x), SetL(Id.L(y)) -> inst_address := !inst_address + 4;
-  Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x (List.assoc (Id.L(y)) !address_env) p
+  | NonTail(x), SetL(Id.L(y)) ->
+    let ad = List.assoc (Id.L(y)) !address_env in
+    let upper = ad / 2048 in
+    let lower = ad mod 2048 in 
+    (match upper with
+    | t when t > 0 -> 
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x upper p;
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 12\t# %d \n" reg_sw p;
+      inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%s %s %s\t# %d \n" x x reg_sw p;
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x lower p;
+    )
+    | t ->
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x ad p;
+    )
+    )
   | NonTail(x), Mov(y) when x = y -> ()
   | NonTail(x), Mov(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" x y p
   | NonTail(x), Neg(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tsub\t%s %%x0 %s\t# %d \n" x y p
@@ -208,7 +223,10 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   (* Risc-Vでは浮動小数の比較演算が見つからなかったので, 暫定的 *)
   | Tail, IfFEq(x, y, e1, e2) ->
       let b = Id.genid ("feq") in
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfeq\t%s %s %s\t# %d \n" x y b p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw2 x y p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tand\t%s %s %s\t# %d \n" reg_sw reg_sw reg_sw2 p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p;
       inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (Tail, e2);
@@ -308,7 +326,10 @@ and g' p oc = function (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       let b = Id.genid ("feq") in
       let b_cont = Id.genid ("feq_cont") in
       let dest = NonTail(z) in
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfeq\t%s %s %s\t# %d \n" x y b p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw2 x y p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tand\t%s %s %s\t# %d \n" reg_sw reg_sw reg_sw2 p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p;
       inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (dest, e2);
@@ -438,8 +459,10 @@ let h oc { name = Id.L(x); args = _; fargs = _; body = e; ret = _ } =
 
 let f oc (Prog(data, fundefs, e)) =
 Format.eprintf "generating assembly...@.";
-Printf.fprintf oc "float_table:\t\n";
-inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%%x7 %%x0 12\n"; (* 12 を%x2に入れる *)
+Printf.fprintf oc ".global min_caml_start\n";
+Printf.fprintf oc "min_caml_start:\t\n";
+inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x29 %%x0 -256\n";
+inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x7 %%x0 12\n"; (* 12 を%x2に入れる *)
 List.iter
   (fun (offset, d) -> 
   let bof = Int32.bits_of_float d in (* 64ビット浮動小数を32bit表現に変換 *)
@@ -490,11 +513,15 @@ List.iter
   )
   data;
 inst_address := !inst_address + 4;
-Printf.fprintf oc "\tj\tmin_caml_start\n";
+Printf.fprintf oc "\tj\tmin_caml_start2\n";
 List.iter (fun fundef -> h oc fundef) fundefs;
-Printf.fprintf oc "min_caml_start:\n";
-inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x4 %%x0 1000\n";
-inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x3 %%x4 1000\n";
+Printf.fprintf oc "min_caml_start2:\n";
+inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x4 %%x0 1\n";
+inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x6 %%x0 20\n";
+inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%%x4 %%x4 %%x6\n";
+inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x6 %%x6 6\n";
+inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x3 %%x0 1\n";
+inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%%x3 %%x3 %%x6\n";
 
 stackset := S.empty;
 stackmap := [];

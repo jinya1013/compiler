@@ -84,3 +84,40 @@ let rec atan t =
   if t > 0.0 then atan_f t 1.0
   else if t < 0.0 then atan_f (-1.0 *. t) (-1.0)
   else 0.0
+in
+
+let rec fispos t = t > 0.0
+in
+let rec fisneg t = t < 0.0
+in
+let rec fiszero t = t = 0.0
+in
+
+let rec fabs t = 
+  if t > 0.0 then t else (-1.0) *. then
+in
+
+let rec fless a b = 
+  if a < b then true else false
+in
+
+let rec fneg a = -1.0 *. a
+in
+
+let rec fsqr a = a *. a
+in
+
+let rec fhalf a = a /. 2.0
+in
+
+(* let rec sqrt x  *)
+(* let rec floor x  *)
+(* let rec int_of_float x  *)
+(* let rec float_of_int x  *)
+
+(* read_float *)
+(* read_int *)
+
+(* print_char *)
+(* print_int *)
+

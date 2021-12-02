@@ -38,6 +38,15 @@ let addtyp x = (x, Type.gentyp ())
 %token LPAREN
 %token RPAREN
 %token EOF
+%token F_IS_POS
+%token F_IS_NEG
+%token F_IS_ZERO
+%token F_ABS
+%token F_LESS
+%token F_NEG
+%token F_SQR
+%token F_HALF
+
 
 /* (* 優先順位とassociativityの定義（低い方から高い方へ） (caml2html: parser_prior) *) */
 %nonassoc IN
@@ -47,7 +56,8 @@ let addtyp x = (x, Type.gentyp ())
 %right LESS_MINUS
 %nonassoc prec_tuple
 %left COMMA
-%left EQUAL LESS_GREATER LESS GREATER LESS_EQUAL GREATER_EQUAL
+%left EQUAL LESS_GREATER LESS GREATER LESS_EQUAL GREATER_EQUAL F_LESS
+%nonassoc F_IS_POS F_IS_NEG F_IS_ZERO F_ABS F_NEG F_SQR F_HALF
 %left PLUS MINUS PLUS_DOT MINUS_DOT
 %left AST SLASH AST_DOT SLASH_DOT
 %right prec_unary_minus
@@ -87,6 +97,12 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
     { match $2 with
     | Float(f, p) -> Float((-.f), p) (* -1.23などは型エラーではないので別扱い *)
     | e -> (Neg(e, (Parsing.symbol_start_pos ()).pos_lnum)) }
+
+| F_NEG exp
+    { match $2 with
+    | Float(f, p) -> Float((-.f), p) (* -1.23などは型エラーではないので別扱い *)
+    | e -> (Neg(e, (Parsing.symbol_start_pos ()).pos_lnum)) }
+
 | exp PLUS exp /* (* 足し算を構文解析するルール (caml2html: parser_add) *) */
     { Add($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
 | exp MINUS exp
@@ -95,6 +111,7 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
     { App(Var("sll", (Parsing.symbol_start_pos ()).pos_lnum), [$1;$3], (Parsing.symbol_start_pos ()).pos_lnum) }
 | exp SLASH exp
     { App(Var("sra", (Parsing.symbol_start_pos ()).pos_lnum), [$1;$3], (Parsing.symbol_start_pos ()).pos_lnum) }
+
 | exp EQUAL exp
     { Eq($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
 | exp LESS_GREATER exp
@@ -107,6 +124,17 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
     { LE($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
 | exp GREATER_EQUAL exp
     { LE($3, $1, (Parsing.symbol_start_pos ()).pos_lnum) }
+
+| F_IS_POS exp
+    { Not(LE($2, Float(0.0, (Parsing.symbol_start_pos ()).pos_lnum), (Parsing.symbol_start_pos ()).pos_lnum), (Parsing.symbol_start_pos ()).pos_lnum) }
+| F_IS_NEG exp
+    { Not(LE(Float(0.0, (Parsing.symbol_start_pos ()).pos_lnum), $2, (Parsing.symbol_start_pos ()).pos_lnum), (Parsing.symbol_start_pos ()).pos_lnum) }
+| F_IS_ZERO exp
+    { Eq($2, Float(0.0, (Parsing.symbol_start_pos ()).pos_lnum), (Parsing.symbol_start_pos ()).pos_lnum) }
+| F_LESS exp exp
+    { Not(LE($3, $2, (Parsing.symbol_start_pos ()).pos_lnum), (Parsing.symbol_start_pos ()).pos_lnum) }
+
+
 | IF exp THEN exp ELSE exp
     %prec prec_if
     { If($2, $4, $6, (Parsing.symbol_start_pos ()).pos_lnum) }
@@ -121,6 +149,11 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
     { FMul($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
 | exp SLASH_DOT exp
     { FDiv($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
+
+| F_SQR exp
+    { FMul($2, $2, (Parsing.symbol_start_pos ()).pos_lnum) }
+| F_HALF exp
+    { FDiv($2, Float(2.0, (Parsing.symbol_start_pos ()).pos_lnum), (Parsing.symbol_start_pos ()).pos_lnum) }
 | LET IDENT EQUAL exp IN exp SEMICOLON
     %prec prec_let
     { Let(addtyp $2, $4, $6, (Parsing.symbol_start_pos ()).pos_lnum) }

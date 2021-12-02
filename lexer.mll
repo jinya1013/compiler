@@ -78,7 +78,7 @@ rule token = parse
     { COMMA }
 | '_'
     { IDENT(Id.gentmp Type.Unit) }
-| "create_array" | "Array.create" | "Array.make" (* [XX] ad hoc *)
+| "Array.create" | "Array.make" | "create_array" (* [XX] ad hoc *)
     { ARRAY_CREATE }
 | '.'
     { DOT }
@@ -109,5 +109,21 @@ and comment = parse
       comment lexbuf }
 | eof
     { Format.eprintf "warning: unterminated comment@." }
+(* | "fispos"
+    { F_IS_POS }
+| "fisneg"
+    { F_IS_NEG }
+| "fiszero"
+    { F_IS_ZERO }
+| "fabs"
+    { F_ABS }
+| "fless"
+    { F_LESS }
+| "fneg"
+    { F_NEG }
+| "fsqr"
+    { F_SQR }
+| "fhalf"
+    { F_HALF } *)
 | _
     { comment lexbuf }

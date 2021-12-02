@@ -127,14 +127,14 @@ let rec g env = function (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
       (match M.find x env with
       | Type.Array(Type.Unit) -> Ans(Nop, p)
       | Type.Array(Type.Float) ->
-          Let((offset, Type.Int), SLL(y, C(2)), (* offset = y * 4 とする *)
-              Ans(LdDF(x, V(offset)), p), p)
+          Let((offset, Type.Int), Add(x, V(y)), (* offset = y * 4 とする *)
+              Ans(LdDF(x, C(0)), p), p)
       | Type.Array(_) ->
-          Let((offset, Type.Int), SLL(y, C(2)),
-              Ans(Ld(x, V(offset)), p), p)
+          Let((offset, Type.Int), Add(x, V(y)),
+              Ans(Ld(x, C(0)), p), p)
       | _ -> assert false)
   | Closure.Put(x, y, z, p) ->
-      let offset = Id.genid "o" in
+      (* let offset = Id.genid "o" in
       (match M.find x env with
       | Type.Array(Type.Unit) -> Ans(Nop, p)
       | Type.Array(Type.Float) ->
@@ -143,6 +143,16 @@ let rec g env = function (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
       | Type.Array(_) ->
           Let((offset, Type.Int), SLL(y, C(2)),
               Ans(St(z, x, V(offset)), p), p)
+      | _ -> assert false) *)
+      let offset = Id.genid "o" in
+      (match M.find x env with
+      | Type.Array(Type.Unit) -> Ans(Nop, p)
+      | Type.Array(Type.Float) ->
+          Let((offset, Type.Int), Add(x, V(y)),
+              Ans(StDF(z, offset, C(0)), p), p)
+      | Type.Array(_) ->
+          Let((offset, Type.Int), Add(x, V(y)),
+              Ans(St(z, offset, C(0)), p), p)
       | _ -> assert false)
   | Closure.ExtArray(Id.L(x), p) -> Ans(SetL(Id.L("min_caml_" ^ x)), p)
 
