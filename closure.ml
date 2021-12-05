@@ -181,7 +181,8 @@ let rec g env known = function (* クロージャ変換ルーチン本体 (caml2html: closure
   | KNormal.Get(x, y, p) -> Get(x, y, p)
   | KNormal.Put(x, y, z, p) -> Put(x, y, z, p)
   | KNormal.ExtArray(x, p) -> ExtArray(Id.L(x), p)
-  | KNormal.ExtFunApp(x, ys, p) -> AppDir(Id.L("min_caml_" ^ x), ys, p)
+  | KNormal.ExtFunApp(x, ys, p) -> 
+      AppDir(Id.L("min_caml_" ^ x), ys, p)
 
 (*
   処理の主要部分．toplevelは関数定義の集合

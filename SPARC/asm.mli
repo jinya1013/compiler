@@ -10,17 +10,17 @@ and exp =
   | Neg of Id.t
   | Add of Id.t * id_or_imm
   | Sub of Id.t * id_or_imm
-  | SLL of Id.t * id_or_imm
-  | Ld of Id.t * id_or_imm
-  | St of Id.t * Id.t * id_or_imm
+  | SLL of Id.t * Id.t
+  | Ld of Id.t * int
+  | St of Id.t * Id.t * int
   | FMovD of Id.t
   | FNegD of Id.t
   | FAddD of Id.t * Id.t
   | FSubD of Id.t * Id.t
   | FMulD of Id.t * Id.t
   | FDivD of Id.t * Id.t
-  | LdDF of Id.t * id_or_imm
-  | StDF of Id.t * Id.t * id_or_imm
+  | LdDF of Id.t * int
+  | StDF of Id.t * Id.t * int
   | Comment of string
   (* virtual instructions *)
   | IfEq of Id.t * id_or_imm * t * t

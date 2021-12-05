@@ -11,17 +11,17 @@ and exp = (* 一つ一つの命令に対応する式 (caml2html: sparcasm_exp) *)
   | Neg of Id.t
   | Add of Id.t * id_or_imm
   | Sub of Id.t * id_or_imm
-  | SLL of Id.t * id_or_imm
-  | Ld of Id.t * id_or_imm
-  | St of Id.t * Id.t * id_or_imm
+  | SLL of Id.t * Id.t
+  | Ld of Id.t * int
+  | St of Id.t * Id.t * int
   | FMovD of Id.t
   | FNegD of Id.t
   | FAddD of Id.t * Id.t
   | FSubD of Id.t * Id.t
   | FMulD of Id.t * Id.t
   | FDivD of Id.t * Id.t
-  | LdDF of Id.t * id_or_imm
-  | StDF of Id.t * Id.t * id_or_imm
+  | LdDF of Id.t * int
+  | StDF of Id.t * Id.t * int
   | Comment of string
   (* virtual instructions *)
   | IfEq of Id.t * id_or_imm * t * t
@@ -50,7 +50,7 @@ let regs = (* Array.init 16 (fun i -> Printf.sprintf "%%r%d" i) *)
      "%x6"; "%x7"; "%x8"; "%x9"; "%x10"; "%x11"; "%x12"; "%x13";
      "%x14"; "%x15"; "%x16"; "%x17"; "%x18"; "%x19"; "%x20";
      "%x21"; "%x22"; "%x23"; "%x24"; "%x25"; "%x26"; "%x27";
-     "%x28"; "%x30"; "%x31"; "%x4"; "%x5"
+     "%x28"; "%x30"; "%x31"; "%x4";
   |]
 (* 関数呼び出し時は, クロージャのアドレスをx6に, 引数をx7, x8, に, 戻り番地をx1に入れる *)
 let fregs = [| 
@@ -60,7 +60,7 @@ let fregs = [|
      "%f21"; "%f22"; "%f23"; "%f24"; "%f25"; "%f26"; "%f27";
      "%f28"; "%f29"; "%f31"
   |]
-let allregs = Array.to_list regs
+let allregs = Array.to_list regs 
 let allfregs = Array.to_list fregs
 let reg_cl = "%x4" (* closure address (caml2html: sparcasm_regcl) *)
 let reg_sw = "%x5"(* temporary for swap *)
@@ -94,8 +94,10 @@ let fv_id_or_imm = function V(x) -> [x] | _ -> [] (* データ型id_or_immに含まれる
 let rec fv_exp = function
   | Nop | Set(_) | SetL(_) | Comment(_) | Restore(_) -> []
   | Mov(x) | Neg(x) | FMovD(x) | FNegD(x) | Save(x, _) -> [x]
-  | Add(x, y') | Sub(x, y') | SLL(x, y') | Ld(x, y') | LdDF(x, y') -> x :: fv_id_or_imm y'
-  | St(x, y, z') | StDF(x, y, z') -> x :: y :: fv_id_or_imm z'
+  | Add(x, y') | Sub(x, y') -> x :: fv_id_or_imm y'
+  | SLL(x, y') -> x :: fv_id_or_imm (V(y'))
+  | Ld(x, y') | LdDF(x, y') -> [x]
+  | St(x, y, z') | StDF(x, y, z') -> x :: fv_id_or_imm (V(y))
   | FAddD(x, y) | FSubD(x, y) | FMulD(x, y) | FDivD(x, y) -> [x; y]
   | IfEq(x, y', e1, e2) | IfLE(x, y', e1, e2) | IfGE(x, y', e1, e2) -> x :: fv_id_or_imm y' @ remove_and_uniq S.empty (fv e1 @ fv e2) (* uniq here just for efficiency *)
   | IfFEq(x, y, e1, e2) | IfFLE(x, y, e1, e2) -> x :: y :: remove_and_uniq S.empty (fv e1 @ fv e2) (* uniq here just for efficiency *)
@@ -190,7 +192,7 @@ and output_exp outchan depth p = function
     output_string outchan "SLL ";
     Id.output_id outchan x;
     output_string outchan " ";
-    output_id_or_imm outchan c;
+    Id.output_id outchan c;
   )
   | Ld (x, offset) ->
   (
@@ -198,7 +200,7 @@ and output_exp outchan depth p = function
     output_string outchan "LD ";
     Id.output_id outchan x;
     output_string outchan " ";
-    output_id_or_imm outchan offset;
+    output_string outchan (string_of_int offset)
   )
   
   | St (x, y, offset) ->
@@ -209,7 +211,7 @@ and output_exp outchan depth p = function
     output_string outchan " ";
     Id.output_id outchan y;
     output_string outchan " ";
-    output_id_or_imm outchan offset;
+    output_string outchan (string_of_int offset)
   )
   | FMovD (x) ->
   (
@@ -261,7 +263,7 @@ and output_exp outchan depth p = function
     output_string outchan "LDDF ";
     Id.output_id outchan x;
     output_string outchan " ";
-    output_id_or_imm outchan offset;
+    output_string outchan (string_of_int offset)
   )
   | StDF (x, y, offset) ->
   (
@@ -271,7 +273,7 @@ and output_exp outchan depth p = function
     output_string outchan " ";
     Id.output_id outchan y;
     output_string outchan " ";
-    output_id_or_imm outchan offset;
+    output_string outchan (string_of_int offset)
   )
   | Comment (str) -> 
   (
@@ -336,10 +338,11 @@ and output_exp outchan depth p = function
   (
     Id.output_tab2 outchan depth p;
     output_string outchan "CALLCLS ";
+    output_string outchan "ADDRESS: ";
     Id.output_id outchan x;
-    output_string outchan " ";
+    output_string outchan ", INT_ARGS: ";
     Id.output_id_list outchan intargs;
-    output_string outchan " ";
+    output_string outchan ", FLOAT_ARGS: ";
     Id.output_id_list outchan floatargs;
   )
   | CallDir (x, intargs, floatargs) ->

@@ -126,7 +126,7 @@ let rec concat e1 xt e2 =
   | Ans(exp, p) -> Let(xt, exp, e2, p)
   | Let(yt, exp, e1', p) -> Let(yt, exp, concat e1' xt e2, p)
 
-let align i = (if i mod 8 = 0 then i else i + 4)
+(* let align i = (if i mod 8 = 0 then i else i + 4) *)
 
 let rec output_id_or_imm outchan = function
   | V (x) -> Id.output_id outchan x

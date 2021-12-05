@@ -1,6 +1,6 @@
 min_caml_read_int:
     addi %x7 %x0 1
-    addi %x8 %x0 16
+    addi %x8 %x0 20
     addi %x9 %x0 8
     sll %x7 %x7 %x8
     addi %x7 %x7 -3 #ロード可能かどうかのフラグが格納されているアドレス
@@ -26,7 +26,7 @@ load_int_size4:
     jr 0(%x1)
 min_caml_read_float:
     addi %x7 %x0 1
-    addi %x8 %x0 16
+    addi %x8 %x0 20
     addi %x9 %x0 8
     sll %x7 %x7 %x8
     addi %x7 %x7 -3 #ロード可能かどうかのフラグが格納されているアドレス
@@ -52,42 +52,12 @@ load_float_size4:
     sw %x6 4(%x2)
     flw %f1 4(%x2)
     jr 0(%x1)
-min_caml_print_int:
-    addi %x7 %x0 1
-    addi %x8 %x0 16
-    addi %x9 %x0 8
-    sll %x7 %x7 %x8
-    addi %x7 %x7 -3 #ロード可能かどうかのフラグが格納されているアドレス
-print_int_size1:
-    lbu %x8 0(%x7) # フラグを読む
-    beq %x8 %x0 print_int_size1 # フラグがゼロだったら読み直し
-    sb %x6 2(%x7) # 1だったらデータを1バイト読む
-    sra %x6 %x6 %x9 # 右に8ビットシフト
-print_int_size2:
-    lbu %x8 0(%x7) # フラグを読む
-    beq %x8 %x0 print_int_size2 # フラグがゼロだったら読み直し
-    sb %x6 2(%x7) # 1だったらデータを1バイト読む
-    sra %x6 %x6 %x9 # 右に8ビットシフト
-print_int_size3:
-    lbu %x8 0(%x7) # フラグを読む
-    beq %x8 %x0 print_int_size3 # フラグがゼロだったら読み直し
-    sb %x6 2(%x7) # 1だったらデータを1バイト読む
-    sra %x6 %x6 %x9 # 右に8ビットシフト
-print_int_size4:
-    lbu %x8 0(%x7) # フラグを読む
-    beq %x8 %x0 print_int_size4 # フラグがゼロだったら読み直し
-    sb %x6 2(%x7) # 1だったらデータを1バイト読む
-    jr 0(%x1)
 min_caml_print_char:
-    addi %x7 %x0 1
-    addi %x8 %x0 16
-    addi %x9 %x0 8
-    sll %x7 %x7 %x8
-    addi %x7 %x7 -3 #ロード可能かどうかのフラグが格納されているアドレス
-print_char_size1:
-    lbu %x8 0(%x7) # フラグを読む
-    beq %x8 %x0 print_int_size1 # フラグがゼロだったら読み直し
-    sb %x6 2(%x7) # 1だったらデータを1バイト読む
+    addi %x7 %x0 1 # x7 <- 1
+    addi %x8 %x0 20 # x8 <- 20
+    sll %x7 %x7 %x8 # x7 <- 0x100000
+    addi %x7 %x7 -3 #ロード可能かどうかのフラグが格納されているアドレス x7 <- 0x100000 - 3
+    sb %x6 2(%x7) # 1だったらデータを1バイト書く
     jr 0(%x1)
 min_caml_sqrt:
     fsqrt %f1 %f1

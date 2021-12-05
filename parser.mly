@@ -108,9 +108,9 @@ exp: /* (* ∞Ï»Ã§Œº∞ (caml2html: parser_exp) *) */
 | exp MINUS exp
     { Sub($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
 | exp AST exp
-    { App(Var("sll", (Parsing.symbol_start_pos ()).pos_lnum), [$1;$3], (Parsing.symbol_start_pos ()).pos_lnum) }
+    { App(Var("mul_exp2", (Parsing.symbol_start_pos ()).pos_lnum), [$1;$3], (Parsing.symbol_start_pos ()).pos_lnum) }
 | exp SLASH exp
-    { App(Var("sra", (Parsing.symbol_start_pos ()).pos_lnum), [$1;$3], (Parsing.symbol_start_pos ()).pos_lnum) }
+    { App(Var("div_exp2", (Parsing.symbol_start_pos ()).pos_lnum), [$1;$3], (Parsing.symbol_start_pos ()).pos_lnum) }
 
 | exp EQUAL exp
     { Eq($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
