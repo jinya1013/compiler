@@ -1,6 +1,7 @@
 let pi = 3.141592653589793 in
 let pi_2 = pi /. 2.0 in
 let pi_4 = pi /. 4.0 in
+let two_pi = 2.0 *. pi in
 
 let s3 = 0.16666668 in
 let s5 = 0.008332824 in
@@ -17,12 +18,12 @@ let rec kernel_cos t =
 in
 
 let rec sin_h t flg = 
-  if t >= pi_4 then flg *. (kernel_sin (pi_2 -. t))
+  if t > pi_4 then flg *. (kernel_cos (pi_2 -. t))
   else flg *. (kernel_sin t)
 in
 
 let rec cos_h t flg = 
-  if t >= pi_4 then flg *. (kernel_cos (pi_2 -. t))
+  if t > pi_4 then flg *. (kernel_sin (pi_2 -. t))
   else flg *. (kernel_cos t)
 in
 
@@ -37,24 +38,35 @@ let rec cos_g t flg =
 in
 
 let rec sin_f t flg = 
-  if t >= pi then sin_f (t -. pi) (-1.0 *. flg)
+  if t >= pi then sin_g (t -. pi) (-1.0 *. flg)
   else sin_g t flg
 in
 
 let rec cos_f t flg = 
-  if t >= pi then cos_f (t -. pi) (-1.0 *. flg)
+  if t >= pi then cos_g (t -. pi) (-1.0 *. flg)
   else cos_g t flg
 in
 
+let rec reduction_g t p = 
+  if t >= two_pi then
+  (if t >= p then reduction_g (t -. p) (p /. 2.0) else reduction_g t (p /. 2.0))
+  else t
+in
+
+let rec reduction_f t p = 
+  if t >= p then reduction_f t (2.0 *. p)
+  else reduction_g t p
+in
+
 let rec sin t = 
-  if t > 0.0 then sin_f t 1.0
-  else if t < 0.0 then sin_f (-1.0 *. t) (-1.0)
+  if t > 0.0 then sin_f (reduction_f t two_pi) 1.0
+  else if t < 0.0 then sin_f (reduction_f (-1.0 *. t) two_pi) (-1.0)
   else 0.0
 in
 
 let rec cos t = 
-  if t > 0.0 then cos_f t 1.0
-  else if t < 0.0 then cos_f (-1.0 *. t) 1.0
+  if t > 0.0 then cos_f (reduction_f t two_pi) 1.0
+  else if t < 0.0 then cos_f (reduction_f (-1.0 *. t) two_pi) 1.0
   else 1.0
 in
 
@@ -75,8 +87,7 @@ let a_thr2 = 0.4375 in
 
 let rec atan_f t flg = 
   if t > a_thr1 then flg *. (pi_2 -. kernel_atan (1.0 /. t))
-  else if t >= a_thr2 then
-  (if t < a_thr1 then flg *. (pi_4 +.  kernel_atan ((t -. 1.0) /. (t +. 1.0))) else flg *. (kernel_atan t))
+  else if t >= a_thr2 then flg *. (pi_4 +. kernel_atan ((t -. 1.0) /. (t +. 1.0)))
   else flg *. (kernel_atan t)
 in
 
@@ -87,17 +98,10 @@ let rec atan t =
 in
 
 (* 整数の掛け算用 *)
-let rec mul_exp2 x y2 = 
-  if y2 = 0 then 0 else
-  if y2 = 1 then x else
-  if y2 = 2 then sll x 1 else
-  sll x 2
+let rec mul_exp2 x y2 = sll x 2
 in
 (* 整数の割り用 *)
-let rec div_exp2 x y2 = 
-  if y2 = 1 then x else
-  if y2 = 2 then sra x 1 else
-  sra x 2
+let rec div_exp2 x y2 = sra x 1
 in
 
 let rec encode n = 

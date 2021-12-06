@@ -1,6 +1,6 @@
 open Asm
 
-let inst_address = ref (4 + 86 * 4)
+let inst_address = ref (4 + 88 * 4)
 let address_env = ref []
 
 let stackset = ref S.empty (* すでにSaveされた変数の集合 (caml2html: emit_stackset) *)
@@ -190,7 +190,7 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tjr\t0(%%x1)\t# %d \n" p;
       inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p
 
-  | Tail, IfEq(x, y', e1, e2) ->
+  | Tail, IfEq(x, y', e1, e2) -> (* x = y then e1 else e2 *)
       let b_else = Id.genid ("beq_else") in
       (
         match y' with
@@ -207,7 +207,7 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       Printf.fprintf oc "%s:\t# %d \n" b_else p;
       stackset := stackset_back;
       g oc (Tail, e2)
-  | Tail, IfLE(x, y', e1, e2) ->
+  | Tail, IfLE(x, y', e1, e2) -> (* y < x then e2 else e1 *)
       let b = Id.genid ("blt") in
       (
         match y' with
@@ -245,20 +245,23 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   (* Risc-Vでは浮動小数の比較演算が見つからなかったので, 暫定的 *)
   | Tail, IfFEq(x, y, e1, e2) ->
       let b = Id.genid ("feq") in
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p;
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw2 x y p;
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tand\t%s %s %s\t# %d \n" reg_sw reg_sw reg_sw2 p;
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 0\t# %d \n" reg_sw p; (* reg_sw に 0 を代入 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 0\t# %d \n" reg_sw2 p; (* reg_sw2 に 0 を代入 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p; (* x <= y なら 1 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw2 y x p; (* y <= x なら 1 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tand\t%s %s %s\t# %d \n" reg_sw reg_sw reg_sw2 p; (* x = y なら 1 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p; (* x = y なら 飛ぶ *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
-      g oc (Tail, e1);
+      g oc (Tail, e2);
       Printf.fprintf oc "%s:\t# %d \n" b p;
       stackset := stackset_back;
-      g oc (Tail, e2)
+      g oc (Tail, e1)
   | Tail, IfFLE(x, y, e1, e2) ->
       let b = Id.genid ("fle_else") in
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p;
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 0\t# %d \n" reg_sw p; (* reg_sw に 0 を代入 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p; (* x <= y なら 1 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p; (* x <= y なら 飛ぶ *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (Tail, e2);
@@ -345,19 +348,21 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       let b = Id.genid ("feq") in
       let b_cont = Id.genid ("feq_cont") in
       let dest = NonTail(z) in
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p;
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw2 x y p;
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tand\t%s %s %s\t# %d \n" reg_sw reg_sw reg_sw2 p;
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 0\t# %d \n" reg_sw p; (* reg_sw に 0 を代入 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 0\t# %d \n" reg_sw2 p; (* reg_sw2 に 0 を代入 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p; (* x <= y なら 1 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw2 y x p; (* y <= x なら 1 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tand\t%s %s %s\t# %d \n" reg_sw reg_sw reg_sw2 p; (* x = y なら 1 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p; (* x = y なら飛ぶ *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
-      g oc (dest, e1);
+      g oc (dest, e2);
       let stackset1 = !stackset in
       inst_address := !inst_address + 4;Printf.fprintf oc "\tj\t%s\t# %d \n" b_cont p;
       inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       Printf.fprintf oc "%s:\t# %d \n" b p;
       stackset := stackset_back;
-      g oc (dest, e2);
+      g oc (dest, e1);
       Printf.fprintf oc "%s:\t# %d \n" b_cont p;
       let stackset2 = !stackset in
       stackset := S.inter stackset1 stackset2
@@ -365,8 +370,9 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       let b = Id.genid ("fle") in
       let b_cont = Id.genid ("fle_cont") in
       let dest = NonTail(z) in
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p;
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 0\t# %d \n" reg_sw p; (* reg_sw に 0 を代入 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p; (* x <= y なら 1 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p; (* x <= y なら 飛ぶ *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tnop\t# %d \n" p;
       let stackset_back = !stackset in
       g oc (dest, e2);

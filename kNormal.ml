@@ -183,7 +183,7 @@ let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
           let e2', t2 = g (M.add_list xts env) e2 in
           LetTuple(xts, y, e2', p), t2)
   | Syntax.Array(e1, e2, p) ->
-      insert_let p(g env e1)
+      insert_let p (g env e1)
         (fun x ->
           let _, t2 as g_e2 = g env e2 in
           insert_let p g_e2

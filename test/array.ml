@@ -42,17 +42,11 @@ let rec print_int n =
   print_char (encode t);
   print_char (encode o);
 in
-let rec mat_add x y = 
-  x.(0) <- x.(0) + y.(0);
-  x.(1) <- x.(1) - y.(1);
-  x.(2) <- x.(2) * y.(2);
-in
-let a = Array.make 3 5 in
-let b = Array.make 3 4 in
-let z = mat_add a b in
-let x = a.(0) in
-let y = a.(1) in
-let z = a.(2) in
-print_int x;
-print_int y;
-print_int z;
+let a = Array.make 3 (1, 2) in
+let b = Array.make 3 (3, 4) in
+let (x1, x2) = a.(0) in
+let (y1, y2) = a.(1) in
+let (z1, z2) = b.(0) in
+print_int x1;
+print_int y2;
+print_int z1;

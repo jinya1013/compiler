@@ -60,6 +60,8 @@ let file f output_flag = (* ?????��?��???????��?��????��????
           ??????
 *)
   let inchan = open_in (f ^ ".ml") in
+  (* let utils_ml_chan = open_in "utils.ml" in *)
+  (* let utils_s_chan = open_in "utils.s" in *)
   let outchan = open_out (f ^ ".s") in
   if !output_flag then 
   (
@@ -74,9 +76,13 @@ let file f output_flag = (* ?????��?��???????��?��????��????
     let outchant = open_out (f ^ ".opt") in
     let outchanp = open_out (f ^ ".opp") in
 
+    (* let utils = Parser.exp Lexer.token (Lexing.from_channel inchan) in *)
+
     lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana outchank outchant outchanp (Lexing.from_channel inchan);
 
     close_in inchan;
+    (* close_in utils_ml_chan; *)
+    (* close_in utils_s_chan; *)
     close_out outchan;
     close_out outchanr;
     close_out outchans;

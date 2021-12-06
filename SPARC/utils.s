@@ -64,7 +64,7 @@ min_caml_sqrt:
     jr 0(%x1)
     nop
 min_caml_floor:
-    floor %f1 %f6
+    floor %f1 %f1
     jr 0(%x1)
     nop
 min_caml_float_of_int:
@@ -86,6 +86,7 @@ min_caml_sll:
 min_caml_create_array:
     add %x8 %x0 %x3 # 先頭アドレスを%x8に入れる
     bne %x6 %x0 create_array_loop # %x6がゼロでないなら戻る
+    add %x6 %x0 %x8 # %x6がゼロなら先頭アドレスを%x6に入れる
     jr 0(%x1)
 create_array_loop:
     sw %x7 0(%x3) # %x7を書き込む
@@ -97,6 +98,7 @@ create_array_loop:
 min_caml_create_float_array:
     add %x8 %x0 %x3 # 先頭アドレスを%x8に入れる
     bne %x6 %x0 create_float_array_loop # %x6がゼロでないなら戻る
+    add %x6 %x0 %x8 # %x6がゼロなら先頭アドレスを%x6に入れる
     jr 0(%x1)
 create_float_array_loop:
     fsw %f1 0(%x3) # %x7を書き込む
