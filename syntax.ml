@@ -1,3 +1,5 @@
+exception CombineError
+
 type pos = int
 type t = (* MinCamlの構文を表現するデータ型 (caml2html: syntax_t) *)
   | Unit of pos
@@ -29,6 +31,24 @@ and fundef = { name : Id.t * Type.t; args : (Id.t * Type.t) list; body : t }
 
 let none_pos:pos = -1
 let top_pos:pos = 0
+
+let get_pos = function
+  | Unit(p) -> p
+  | Bool (_, p) | Int (_, p) | Float (_, p) | Not (_, p) | Neg (_, p) | FNeg (_, p) | Var (_, p) | Tuple (_, p) -> p
+  | Add (_, _, p) | Sub (_, _, p) | FAdd (_, _, p) | FSub (_, _, p) | FMul (_, _, p) | FDiv (_, _, p) | LetRec (_, _, p) | App (_, _, p) -> p
+  | Eq (_, _, p) | LE (_, _, p) | Array (_, _, p) | Get (_, _, p) -> p
+  | If (_, _, _, p) | Let (_, _, _, p) | LetTuple (_, _, _, p) | Put (_, _, _, p) -> p
+
+let rec combine e1 e2 = 
+  match e1 with
+| Let((x, t), f1, Unit(_), _) -> 
+  let p = get_pos e2 in Let((x, t), f1, e2, p)
+| LetRec({ name=(x, t); args=yts; body=f1 }, Unit(_), _) -> 
+  let p = get_pos e2 in LetRec({ name=(x, t); args=yts; body=f1 }, e2, p)
+| Let((x, t), f1, f2, _) -> Let((x, t), f1, combine f2 e2, 0)
+| LetRec({ name=(x, t); args=yts; body=f1 }, f2, _) -> LetRec({ name=(x, t); args=yts; body=f1 }, combine f2 e2, 0)
+| _ -> raise CombineError
+  
 
 let rec output_syntax outchan s depth = 
 (* 

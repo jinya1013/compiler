@@ -7,10 +7,9 @@ let rec iter n e = (* ????????????????????????????????? (caml2html: main_iter) *
   if e = e' then e else
   iter (n - 1) e'
 
-let lexbuf outchan l = (* ???????????��????��?��????��?????????????��?��???????��?��???????? (caml2html: main_lexbuf) *)
-  Id.counter := 0;
+let lexbuf outchan inchan l = 
   Typing.extenv := M.empty;
-  Emit.f outchan
+  Emit.f outchan inchan
     (RegAlloc.f
        (Simm.f
           (Virtual.f
@@ -21,10 +20,10 @@ let lexbuf outchan l = (* ???????????��????��?��????��??????????
                     (Typing.f
                       (Parser.exp Lexer.token l)))))))))
 
-let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana outchank outchant outchanp l = (* ???????????��????��?��????��?????????????��?��???????��?��???????? (caml2html: main_lexbuf) *)
+let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana outchank outchant utils_s_chan p = 
   Id.counter := 0;
   Typing.extenv := M.empty;
-  Emit.f outchan
+  Emit.f outchan utils_s_chan
     (let r = RegAlloc.f
       (let s = Simm.f
         (let v = Virtual.f
@@ -34,9 +33,7 @@ let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana
                 (let abc = RmExp.f 
                   (let k = KNormal.f
                     (let t = Typing.f
-                      (
-                        let p = Parser.exp Lexer.token l in output_string outchanp "AFTER PARSE\n"; Syntax.output_prog outchanp p; p
-                      )
+                      p
                     in output_string outchant "AFTER TYPING\n"; Syntax.output_prog outchant t; t)
                   in output_string outchank "AFTER KNORMAL\n"; KNormal.output_prog outchank k; k)
                 in output_string outchank "AFTER REMOVE_COMMON_EXP\n"; KNormal.output_prog outchank abc; abc)
@@ -47,7 +44,20 @@ let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana
       in output_string outchans "AFTER SIMM\n"; Asm.output_prog outchans s; s)
     in output_string outchanr "AFTER REGALLOC\n";Asm.output_prog outchanr r; r)
 
-let string s = lexbuf_verbose stdout stdout stdout stdout stdout stdout stdout stdout stdout stdout (Lexing.from_string s) (* ???�?????????��?��????��????????�?�???��?????�?示�????? (caml2html: main_string) *)
+let string s = 
+  let utils_ml_chan = open_in "utils.ml" in
+  let utils_s_chan = open_in "utils.s" in
+  let utils = Parser.exp Lexer.token (Lexing.from_channel utils_ml_chan) in
+  let mains = Parser.exp Lexer.token (Lexing.from_channel stdin) in
+  let combined = Syntax.combine utils mains in
+
+  output_string stdout "AFTER PARSE\n";
+  Syntax.output_prog stdout combined;
+  
+  lexbuf_verbose stdout stdout stdout stdout stdout stdout stdout stdout stdout utils_s_chan combined;
+
+  close_in utils_ml_chan;
+  close_in utils_s_chan
 
 let file f output_flag = (* ?????��?��???????��?��????��?????????????��?��???????��???????? (caml2html: main_file) *)
 (* 
@@ -60,8 +70,8 @@ let file f output_flag = (* ?????��?��???????��?��????��????
           ??????
 *)
   let inchan = open_in (f ^ ".ml") in
-  (* let utils_ml_chan = open_in "utils.ml" in *)
-  (* let utils_s_chan = open_in "utils.s" in *)
+  let utils_ml_chan = open_in "utils.ml" in
+  let utils_s_chan = open_in "utils.s" in
   let outchan = open_out (f ^ ".s") in
   if !output_flag then 
   (
@@ -76,13 +86,18 @@ let file f output_flag = (* ?????��?��???????��?��????��????
     let outchant = open_out (f ^ ".opt") in
     let outchanp = open_out (f ^ ".opp") in
 
-    (* let utils = Parser.exp Lexer.token (Lexing.from_channel inchan) in *)
+    let utils = Parser.exp Lexer.token (Lexing.from_channel utils_ml_chan) in
+    let mains = Parser.exp Lexer.token (Lexing.from_channel inchan) in
+    let combined = Syntax.combine utils mains in
 
-    lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana outchank outchant outchanp (Lexing.from_channel inchan);
+    output_string outchanp "AFTER PARSE\n";
+    Syntax.output_prog outchanp combined;
+
+    lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana outchank outchant utils_s_chan combined;
 
     close_in inchan;
-    (* close_in utils_ml_chan; *)
-    (* close_in utils_s_chan; *)
+    close_in utils_ml_chan;
+    close_in utils_s_chan;
     close_out outchan;
     close_out outchanr;
     close_out outchans;
@@ -99,13 +114,13 @@ let file f output_flag = (* ?????��?��???????��?��????��????
   else
   (
     try
-      lexbuf outchan (Lexing.from_channel inchan);
+      lexbuf outchan utils_s_chan (Lexing.from_channel inchan);
       close_in inchan;
       close_out outchan;
     with e -> (close_in inchan; close_out outchan; raise e)
   )
 
-let () = (* ??????????????��?��????��?????�?�???????�?????????? (caml2html: main_entry) *)
+let () = 
   let files = ref [] in
   let output_flag = ref true in
   Arg.parse

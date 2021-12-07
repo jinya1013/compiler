@@ -22,57 +22,46 @@
 (*NOMINCAML open MiniMLRuntime;;*)
 (*NOMINCAML open Globals;;*)
 
-let pi = 3.141592653589793 in
-let pi_2 = pi /. 2.0 in
-let pi_4 = pi /. 4.0 in
-let two_pi = 2.0 *. pi in
-
-let s3 = 0.16666668 in
-let s5 = 0.008332824 in
-let s7 = 0.00019587841 in
 let rec kernel_sin t = 
-  t -. s3 *. t *. t*. t +. s5 *. t *. t *. t *. t *. t -. s7 *. t *. t *. t *. t *. t *. t *. t
+  t -. 0.16666668 *. t *. t*. t +. 0.008332824 *. t *. t *. t *. t *. t -. 0.00019587841 *. t *. t *. t *. t *. t *. t *. t
 in
 
-let c2 = 0.5 in
-let c4 = 0.04166368 in
-let c6 = 0.0013695068 in
 let rec kernel_cos t = 
-  1.0 -. c2 *. t *. t +. c4 *. t *. t *. t *. t -. c6 *. t *. t *. t *. t *. t *. t
+  1.0 -. 0.5 *. t *. t +. 0.04166368 *. t *. t *. t *. t -. 0.0013695068 *. t *. t *. t *. t *. t *. t
 in
 
 let rec sin_h t flg = 
-  if t > pi_4 then flg *. (kernel_cos (pi_2 -. t))
+  if t > 0.78539816339 then flg *. (kernel_cos (1.57079632679 -. t))
   else flg *. (kernel_sin t)
 in
 
 let rec cos_h t flg = 
-  if t > pi_4 then flg *. (kernel_sin (pi_2 -. t))
+  if t > 0.78539816339 then flg *. (kernel_sin (1.57079632679 -. t))
   else flg *. (kernel_cos t)
 in
 
 let rec sin_g t flg = 
-  if t >= pi_2 then sin_h (pi -. t) flg
+  if t >= 1.57079632679 then sin_h (3.141592653589793 -. t) flg
   else sin_h t flg
 in
 
 let rec cos_g t flg = 
-  if t >= pi_2 then cos_h (pi -. t) (-1.0 *. flg)
+  if t >= 1.57079632679 then cos_h (3.141592653589793 -. t) (-1.0 *. flg)
   else cos_h t flg
 in
 
 let rec sin_f t flg = 
-  if t >= pi then sin_g (t -. pi) (-1.0 *. flg)
+  if t >= 3.141592653589793 then sin_g (t -. 3.141592653589793) (-1.0 *. flg)
   else sin_g t flg
 in
 
 let rec cos_f t flg = 
-  if t >= pi then cos_g (t -. pi) (-1.0 *. flg)
+  if t >= 3.141592653589793 then cos_g (t -. 3.141592653589793) (-1.0 *. flg)
   else cos_g t flg
 in
 
 let rec reduction_g t p = 
-  if t >= two_pi then
+  if t >= 6.28318530718 then
   (if t >= p then reduction_g (t -. p) (p /. 2.0) else reduction_g t (p /. 2.0))
   else t
 in
@@ -83,35 +72,27 @@ let rec reduction_f t p =
 in
 
 let rec sin t = 
-  if t > 0.0 then sin_f (reduction_f t two_pi) 1.0
-  else if t < 0.0 then sin_f (reduction_f (-1.0 *. t) two_pi) (-1.0)
+  if t > 0.0 then sin_f (reduction_f t 6.28318530718) 1.0
+  else if t < 0.0 then sin_f (reduction_f (-1.0 *. t) 6.28318530718) (-1.0)
   else 0.0
 in
 
 let rec cos t = 
-  if t > 0.0 then cos_f (reduction_f t two_pi) 1.0
-  else if t < 0.0 then cos_f (reduction_f (-1.0 *. t) two_pi) 1.0
+  if t > 0.0 then cos_f (reduction_f t 6.28318530718) 1.0
+  else if t < 0.0 then cos_f (reduction_f (-1.0 *. t) 6.28318530718) 1.0
   else 1.0
 in
 
-let a3 = 0.3333333 in
-let a5 = 0.2 in
-let a7 = 0.142857142 in
-let a9 = 0.111111104 in
-let a11 = 0.08976446 in
-let a13 = 0.060035485
-in
-
 let rec kernel_atan t = 
-  t -. a3 *. t *. t *. t +. a5 *. t *. t *. t *. t *. t -. a7 *. t *. t *. t *. t *. t *. t *. t +. a9 *. t *. t *. t *. t *. t *. t *. t *. t *. t -. a11 *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t +. a13 *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t
+  t -. 0.3333333 *. t *. t *. t +. 0.2 *. t *. t *. t *. t *. t -. 0.142857142 *. t *. t *. t *. t *. t *. t *. t +. 0.111111104 *. t *. t *. t *. t *. t *. t *. t *. t *. t -. 0.08976446 *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t +. 0.060035485 *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t
 in
 
 let a_thr1 = 2.4375 in
 let a_thr2 = 0.4375 in
 
 let rec atan_f t flg = 
-  if t > a_thr1 then flg *. (pi_2 -. kernel_atan (1.0 /. t))
-  else if t >= a_thr2 then flg *. (pi_4 +. kernel_atan ((t -. 1.0) /. (t +. 1.0)))
+  if t > a_thr1 then flg *. (1.57079632679 -. kernel_atan (1.0 /. t))
+  else if t >= a_thr2 then flg *. (0.78539816339 +. kernel_atan ((t -. 1.0) /. (t +. 1.0)))
   else flg *. (kernel_atan t)
 in
 
@@ -160,21 +141,6 @@ let rec print_int n =
   print_char (encode t);
   print_char (encode o);
 in
-
-(* min_caml_print_int:
-    addi %x7 %x0 1
-    addi %x8 %x0 20
-    addi %x9 %x0 8
-    sll %x7 %x7 %x8
-    addi %x7 %x7 -3 #ロード可能かどうかのフラグが格納されているアドレス
-    sb %x6 2(%x7) # データを1バイト書く
-    sra %x6 %x6 %x9 # 右に8ビットシフト
-    sb %x6 2(%x7) # データを1バイト書く
-    sra %x6 %x6 %x9 # 右に8ビットシフト
-    sb %x6 2(%x7) # データを1バイト書く
-    sra %x6 %x6 %x9 # 右に8ビットシフト
-    sb %x6 2(%x7) # データを1バイト書く
-    jr 0(%x1) *)
 
 let rec fispos t = t > 0.0
 in
