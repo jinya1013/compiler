@@ -95,3 +95,4 @@ _opam/
 *.ops
 *.opt
 *.opv
+min-rt_cpuexp.s
