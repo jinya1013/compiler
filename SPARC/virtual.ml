@@ -82,11 +82,6 @@ let rec g env e =  (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
       | _ -> Ans(Mov(x), p)) (* 多分Type.IntかType.Bool *)
   | Closure.MakeCls((x, t), { Closure.entry = l; Closure.actual_fv = ys }, e2, p) -> (* 自由変数を持つ関数xのクロージャの生成 *)
       (* Closureのアドレスをセットしてから、自由変数の値をストア *)
-      (
-        match p, l with
-        | p, L(l') when p = 722 -> print_string ("\n\n!722 MakeClosure"^l'^"\n");
-        | _ -> ()
-      );
       let e2' = g (M.add x t env) e2 in
       let offset, store_fv =
         expand

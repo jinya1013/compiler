@@ -37,7 +37,6 @@ let addtyp x = (x, Type.gentyp ())
 %token SEMICOLON
 %token LPAREN
 %token RPAREN
-%token EOF
 %token F_IS_POS
 %token F_IS_NEG
 %token F_IS_ZERO
@@ -46,6 +45,8 @@ let addtyp x = (x, Type.gentyp ())
 %token F_NEG
 %token F_SQR
 %token F_HALF
+%token EOF
+
 
 
 /* (* 優先順位とassociativityの定義（低い方から高い方へ） (caml2html: parser_prior) *) */
@@ -57,9 +58,9 @@ let addtyp x = (x, Type.gentyp ())
 %nonassoc prec_tuple
 %left COMMA
 %left EQUAL LESS_GREATER LESS GREATER LESS_EQUAL GREATER_EQUAL F_LESS
-%nonassoc F_IS_POS F_IS_NEG F_IS_ZERO F_ABS F_NEG F_SQR F_HALF
 %left PLUS MINUS PLUS_DOT MINUS_DOT
 %left AST SLASH AST_DOT SLASH_DOT
+%nonassoc F_IS_POS F_IS_NEG F_IS_ZERO F_ABS F_NEG F_SQR F_HALF
 %right prec_unary_minus
 %left prec_app
 %left DOT
@@ -99,9 +100,7 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
     | e -> (Neg(e, (Parsing.symbol_start_pos ()).pos_lnum)) }
 
 | F_NEG exp
-    { match $2 with
-    | Float(f, p) -> Float((-.f), p) (* -1.23などは型エラーではないので別扱い *)
-    | e -> (Neg(e, (Parsing.symbol_start_pos ()).pos_lnum)) }
+    { FMul(Float(-1.0, (Parsing.symbol_start_pos ()).pos_lnum), $2, (Parsing.symbol_start_pos ()).pos_lnum) }
 
 | exp PLUS exp /* (* 足し算を構文解析するルール (caml2html: parser_add) *) */
     { Add($1, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
@@ -131,8 +130,13 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
     { Not(LE(Float(0.0, (Parsing.symbol_start_pos ()).pos_lnum), $2, (Parsing.symbol_start_pos ()).pos_lnum), (Parsing.symbol_start_pos ()).pos_lnum) }
 | F_IS_ZERO exp
     { Eq($2, Float(0.0, (Parsing.symbol_start_pos ()).pos_lnum), (Parsing.symbol_start_pos ()).pos_lnum) }
-| F_LESS exp exp
+| F_LESS simple_exp simple_exp
     { Not(LE($3, $2, (Parsing.symbol_start_pos ()).pos_lnum), (Parsing.symbol_start_pos ()).pos_lnum) }
+| F_ABS exp
+    { If(LE($2, Float(0.0, (Parsing.symbol_start_pos ()).pos_lnum), (Parsing.symbol_start_pos ()).pos_lnum),
+    FMul(Float(-1.0, (Parsing.symbol_start_pos ()).pos_lnum), $2, (Parsing.symbol_start_pos ()).pos_lnum), 
+    $2,
+    (Parsing.symbol_start_pos ()).pos_lnum) }
 
 
 | IF exp THEN exp ELSE exp

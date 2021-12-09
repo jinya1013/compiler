@@ -74,6 +74,22 @@ rule token = parse
     { IN }
 | "rec"
     { REC }
+| "fispos"
+    { F_IS_POS }
+| "fisneg"
+    { F_IS_NEG }
+| "fiszero"
+    { F_IS_ZERO }
+| "fabs"
+    { F_ABS }
+| "fless"
+    { F_LESS }
+| "fneg"
+    { F_NEG }
+| "fsqr"
+    { F_SQR }
+| "fhalf"
+    { F_HALF }
 | ','
     { COMMA }
 | '_'
@@ -109,21 +125,5 @@ and comment = parse
       comment lexbuf }
 | eof
     { Format.eprintf "warning: unterminated comment@." }
-(* | "fispos"
-    { F_IS_POS }
-| "fisneg"
-    { F_IS_NEG }
-| "fiszero"
-    { F_IS_ZERO }
-| "fabs"
-    { F_ABS }
-| "fless"
-    { F_LESS }
-| "fneg"
-    { F_NEG }
-| "fsqr"
-    { F_SQR }
-| "fhalf"
-    { F_HALF } *)
 | _
     { comment lexbuf }

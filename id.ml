@@ -7,7 +7,7 @@ let output_tab outchan depth =
     | 0 -> ()
     | _ -> 
     (
-      output_string outchan "\t";
+      output_string outchan " ";
       _output_tab (iter-1)
     )
     in 
@@ -20,7 +20,7 @@ let output_tab2 outchan depth p =
     | 0 -> ()
     | _ -> 
     (
-      output_string outchan "\t";
+      output_string outchan " ";
       _output_tab (iter-1)
     )
     in 
@@ -30,12 +30,12 @@ let output_tab2 outchan depth p =
       | -1 -> 
       (
         output_string outchan " ";
-        output_string outchan "\t"
+        output_string outchan " "
       )
       | x -> 
       (
         output_string outchan (string_of_int x);
-        output_string outchan "\t"
+        output_string outchan " "
       )
     );
     _output_tab depth
