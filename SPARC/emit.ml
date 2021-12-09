@@ -84,26 +84,17 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
     let ad = List.assoc (Id.L(y)) !address_env in
     let upper = ad / 4096 in
     let lower = ad mod 4096 in 
-    (match y with
-    | c when c = "shadow_check_one_or_matrix.3024" 
-      -> print_string "\nshadow: SetL "; print_int ad; print_string " "; print_int upper; print_string " "; print_int lower; print_string "\n";
-    | _ -> ()
-    );
     (
       match upper with
       | t when (t > 0 && lower > 2047) ->
       (
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x upper p;
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 12\t# %d \n" reg_sw p;
-        inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%s %s %s\t# %d \n" x x reg_sw p;
+        inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d \n" x ad p;
         inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s 2047\t# %d \n" x x p;
         inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" x x (lower - 2047) p;
       )
       | t when (t > 0 && lower <= 2047) ->
       (
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x upper p;
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 12\t# %d \n" reg_sw p;
-        inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%s %s %s\t# %d \n" x x reg_sw p;
+        inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d \n" x ad p;
         inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" x x lower p;
       )
       | t when lower > 2047 ->
@@ -191,6 +182,10 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       (
         match y' with
         | V(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x y b_else p; (* (x != y なら飛ぶ) *)
+        | C(i) when i = 0 -> 
+        (
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" x b_else p
+        )
         | C(i) -> 
         (
           inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
@@ -207,6 +202,10 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       (
         match y' with
         | V(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" y x b p; (* (y < x なら飛ぶ) *)
+        | C(i) when i = 0 -> 
+        (
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%%x0 %s %s\t# %d \n" x b p
+        )
         | C(i) -> 
         (
           inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
@@ -223,6 +222,10 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       (
         match y' with
         | V(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x y b_else p; (* (x < y なら飛ぶ) *)
+        | C(i) when i = 0 -> 
+        (
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %%x0 %s\t# %d \n" x b_else p
+        )
         | C(i) -> 
         (
           inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
@@ -265,7 +268,11 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       let dest = NonTail(z) in
       (
         match y' with
-        | V(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x y b_else p; 
+        | V(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %s %s\t# %d \n" x y b_else p;
+        | C(i) when i = 0 -> 
+        (
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" x b_else p
+        )
         | C(i) -> 
         (
           inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
@@ -289,6 +296,10 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       (
         match y' with
         | V(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" y x b p; (* (y < x なら飛ぶ) *)
+        | C(i) when i = 0-> 
+        (
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%%x0 %s %s\t# %d \n" x b p
+        )
         | C(i) -> 
         (
           inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
@@ -312,6 +323,10 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       (
         match y' with
         | V(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %s %s\t# %d \n" x y b_else p; (* (x - 1 < y なら飛ぶ) *)
+        | C(i) when i = 0 -> 
+        (
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tblt\t%s %%x0 %s\t# %d \n" x b_else p
+        )
         | C(i) -> 
         (
           inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" reg_sw i p;
@@ -459,47 +474,21 @@ let output_float_table oc data =
     (fun (offset, d) -> 
     let bof = Int32.bits_of_float d in (* 64ビット浮動小数を32bit表現に変換 *)
     let l11_0 = Int32.logand (Int32.of_string "0xfff") bof in (* 下位12ビット *)
-    let m23_12 = Int32.logand (Int32.of_string "0xfff") (Int32.shift_right_logical bof 12) in
-    let h31_24 = Int32.logand (Int32.of_string "0xff") (Int32.shift_right_logical bof 24) in
 
-    inst_address := !inst_address + 4;
-    Printf.fprintf oc "\taddi\t%%x6 %%x0 %ld\n" h31_24; (* 上位8ビットを%x1に入れる *)
-
-    inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%%x6 %%x6 %%x7\n"; (* %x1を12ビットだけ左シフト *)
-
-    (
-      match m23_12 with
-      | x when x > Int32.of_string "0x7ff" -> 
-        (
-          inst_address := !inst_address + 4;
-          Printf.fprintf oc "\taddi\t%%x6 %%x6 2047\n";
-          inst_address := !inst_address + 4;
-          Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" (Int32.sub m23_12 (Int32.of_string "0x7ff"));
-        )
-      | _ -> 
-        (
-          inst_address := !inst_address + 4;
-          Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" m23_12;
-        )
-    ); (* 真ん中12ビットを%x1に入れる *)
-
-    inst_address := !inst_address + 4;Printf.fprintf oc "\tsll\t%%x6 %%x6 %%x7\n"; (* %x1を12ビットだけ左シフト *)
+    inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%%x6 %ld\n" bof; (*上位20ビットを%x6に入れる *)
 
     (
       match l11_0 with
       | x when x > Int32.of_string "0x7ff" -> 
         (
-          inst_address := !inst_address + 4;
-          Printf.fprintf oc "\taddi\t%%x6 %%x6 2047\n";
-          inst_address := !inst_address + 4;
-          Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" (Int32.sub l11_0 (Int32.of_string "0x7ff"));
+          inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%%x6 %%x6 2047\n";
+          inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" (Int32.sub l11_0 (Int32.of_string "0x7ff"));
         )
       | _ -> 
         (
-          inst_address := !inst_address + 4;
-          Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" l11_0;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" l11_0;
         )
-    ); (* 下位12ビットを%x1に入れる *)
+    ); (* 下位12ビットを%x6に入れる *)
 
     inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%%x6 %d(%s)\n" offset reg_ftp;
     )
