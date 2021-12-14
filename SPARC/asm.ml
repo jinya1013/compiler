@@ -72,17 +72,6 @@ let reg_hp = "%x3" (* heap pointer (caml2html: sparcasm_reghp) *)
 let reg_ra = "%x1" (* return address *)
 let is_reg x = (x.[0] = '%')
 
-(* let co_freg_table =
-  let ht = Hashtbl.create 16 in
-  for i = 0 to 15 do
-    Hashtbl.add
-      ht
-      (Printf.sprintf "%%f%d" (i * 2))
-      (Printf.sprintf "%%f%d" (i * 2 + 1))
-  done;
-  ht
-let co_freg freg = Hashtbl.find co_freg_table freg "companion" freg *)
-
 (* super-tenuki *)
 let rec remove_and_uniq xs = function (* リストysの要素からダブりを無くして, 集合xsに格納する *)
   | [] -> []

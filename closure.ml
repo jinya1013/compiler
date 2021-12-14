@@ -91,6 +91,59 @@ let rec fv = function
   | LetTuple(xts, y, e, _) -> S.add y (S.diff (fv e) (S.of_list (List.map fst xts)))
   | Put(x, y, z, _) -> S.of_list [x; y; z]
 
+(* let rec fv = function
+(* 
+    与えられたクロージャ変換後の式cの中に含まれる自由変数のリストを出力する.
+
+    Args
+        c : Closure.t
+          自由変数の変数を計算したいクロージャ変換後の式
+
+    Returns
+        retval : S.t
+          cが含む自由変数の集合            
+*)
+  | Unit(_) | Int(_) | Float(_) | ExtArray(_) -> S.empty
+  | Neg(x, _) | FNeg(x, _) -> 
+    let x' = List.filter (fun x -> not (M.mem x !(GlobalVar.genv))) [x] in 
+    S.of_list x'
+  | Add(x, y, _) | Sub(x, y, _) | FAdd(x, y, _) | FSub(x, y, _) | FMul(x, y, _) | FDiv(x, y, _) | Get(x, y, _) -> 
+    let xy' = List.filter (fun x -> not (M.mem x !(GlobalVar.genv))) [x; y] in 
+    S.of_list xy'
+  | IfEq(x, y, e1, e2, _)| IfLE(x, y, e1, e2, _) ->
+  (
+    match x, y with
+    | s, t when M.mem s !(GlobalVar.genv) && M.mem t !(GlobalVar.genv) -> S.union (fv e1) (fv e2)
+    | s, t when M.mem s !(GlobalVar.genv) -> (S.add y (S.union (fv e1) (fv e2)))
+    | s, t when M.mem t !(GlobalVar.genv) -> (S.add x (S.union (fv e1) (fv e2)))
+    | _, _ -> S.add x (S.add y (S.union (fv e1) (fv e2)))
+  )
+  | Let((x, t), e1, e2, _) -> S.union (fv e1) (S.remove x (fv e2))
+  | Var(x, _) ->
+    let x' = List.filter (fun x -> not (M.mem x !(GlobalVar.genv))) [x] in 
+    S.of_list x'
+  | MakeCls((x, t), { entry = l; actual_fv = ys }, e, _) -> 
+    let ys' = List.filter (fun x -> not (M.mem x !(GlobalVar.genv))) ys in
+    S.remove x (S.union (S.of_list ys') (fv e))
+  | AppCls(x, ys, _) -> 
+    let xys' = List.filter (fun x -> not (M.mem x !(GlobalVar.genv))) (x :: ys) in
+    S.of_list xys'
+  | AppDir(_, xs, _) | Tuple(xs, _) ->
+    let xs' = List.filter (fun x -> not (M.mem x !(GlobalVar.genv))) xs in
+    S.of_list xs'
+  | LetTuple(xts, y, e, _) -> 
+    let xs = List.map fst xts in
+    let xs' = List.filter (fun x -> not (M.mem x !(GlobalVar.genv))) xs in
+    let sxs' = S.of_list xs' in
+    (
+      match y with
+      | t when M.mem t !(GlobalVar.genv) -> S.diff (fv e) sxs'
+      | _ -> S.add y (S.diff (fv e) sxs')
+    )
+  | Put(x, y, z, _) -> 
+    let xyz' = List.filter (fun x -> not (M.mem x !(GlobalVar.genv))) [x; y; z] in
+    S.of_list xyz' *)
+
 let toplevel : fundef list ref = ref []
 
 (*

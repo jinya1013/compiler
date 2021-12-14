@@ -1,9 +1,16 @@
 let rec kernel_sin t = 
-  t -. 0.16666668 *. t *. t*. t +. 0.008332824 *. t *. t *. t *. t *. t -. 0.00019587841 *. t *. t *. t *. t *. t *. t *. t
+  let t2 = t *. t in
+  let t3 = t2 *. t in
+  let t5 = t3 *. t2 in
+  let t7 = t5 *. t2 in
+  t -. 0.16666668 *. t3 +. 0.008332824 *. t5 -. 0.00019587841 *. t7
 in
 
 let rec kernel_cos t = 
-  1.0 -. 0.5 *. t *. t +. 0.04166368 *. t *. t *. t *. t -. 0.0013695068 *. t *. t *. t *. t *. t *. t
+  let t2 = t *. t in
+  let t4 = t2 *. t2 in
+  let t6 = t4 *. t2 in
+  1.0 -. 0.5 *. t2 +. 0.04166368 *. t4 -. 0.0013695068 *. t6
 in
 
 let rec sin_f t flg = 
@@ -57,7 +64,14 @@ in
 let rec atan t = 
   let rec atan_f t flg = 
     let rec kernel_atan t = 
-      t -. 0.3333333 *. t *. t *. t +. 0.2 *. t *. t *. t *. t *. t -. 0.142857142 *. t *. t *. t *. t *. t *. t *. t +. 0.111111104 *. t *. t *. t *. t *. t *. t *. t *. t *. t -. 0.08976446 *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t +. 0.060035485 *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t *. t
+      let t2 = t *. t in
+      let t3 = t2 *. t in
+      let t5 = t3 *. t2 in
+      let t7 = t5 *. t2 in
+      let t9 = t7 *. t2 in
+      let t11 = t9 *. t2 in
+      let t13 = t11 *. t2 in
+      t -. 0.3333333 *. t3 +. 0.2 *. t5 -. 0.142857142 *. t7 +. 0.111111104 *. t9 -. 0.08976446 *. t11 +. 0.060035485 *. t13
     in
     if t > 2.4375 then flg *. (1.57079632679 -. kernel_atan (1.0 /. t))
     else if t >= 0.4375 then flg *. (0.78539816339 +. kernel_atan ((t -. 1.0) /. (t +. 1.0)))

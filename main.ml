@@ -70,6 +70,7 @@ let file f output_flag = (* ?????��?��???????��?��????��????
           ??????
 *)
   let inchan = open_in (f ^ ".ml") in
+  let gchan = open_in "globals.ml" in
   let utils_ml_chan = open_in "utils.ml" in
   let utils_s_chan = open_in "utils.s" in
   let outchan = open_out (f ^ ".s") in
@@ -86,9 +87,10 @@ let file f output_flag = (* ?????��?��???????��?��????��????
     let outchant = open_out (f ^ ".opt") in
     let outchanp = open_out (f ^ ".opp") in
 
+    let globals = GlobalVar.f stdout (Typing.f (Parser.exp Lexer.token (Lexing.from_channel gchan))) in
     let utils = Parser.exp Lexer.token (Lexing.from_channel utils_ml_chan) in
     let mains = Parser.exp Lexer.token (Lexing.from_channel inchan) in
-    let combined = Syntax.combine utils mains in
+    let combined = Syntax.combine (Syntax.combine globals utils) mains in
 
     output_string outchanp "AFTER PARSE\n";
     Syntax.output_prog outchanp combined;
@@ -96,6 +98,7 @@ let file f output_flag = (* ?????��?��???????��?��????��????
     lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana outchank outchant utils_s_chan combined;
 
     close_in inchan;
+    close_in gchan;
     close_in utils_ml_chan;
     close_in utils_s_chan;
     close_out outchan;

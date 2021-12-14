@@ -1,6 +1,6 @@
 open Asm
 
-let inst_address = ref (4)
+let inst_address = ref 4
 let address_env = ref []
 
 let stackset = ref S.empty (* すでにSaveされた変数の集合 (caml2html: emit_stackset) *)
@@ -71,15 +71,34 @@ let rec g oc = function (* 命令列のアセンブリ生成 (caml2html: emit_g) *)
       g oc (dest, e)
 and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   (* 末尾でなかったら計算結果をdestにセット (caml2html: emit_nontail) *)
-  (* (
-    match p, e with
-    | p, (Tail, exp) when p = 722 -> output_string oc "\nTail "; output_exp oc 0 p exp; output_string oc "\n";
-    | p, (NonTail(_), exp) when p = 722 -> output_string oc "\nNonTail "; output_exp oc 0 p exp; output_string oc "\n";
-    | _ -> ();
-  ); *)
   match e with
   | NonTail(_), Nop -> ()
-  | NonTail(x), Set(i) -> inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x i p
+  | NonTail(x), Set(i) ->
+    let upper = i / 4096 in
+    let lower = i mod 4096 in 
+    (
+      match upper with
+      | t when (t > 0 && lower > 2047) ->
+      (
+        inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d \n" x i p;
+        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s 2047\t# %d \n" x x p;
+        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" x x (lower - 2047) p;
+      )
+      | t when (t > 0 && lower <= 2047) ->
+      (
+        inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d \n" x i p;
+        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" x x lower p;
+      )
+      | t when lower > 2047 ->
+      (
+        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 2047\t# %d \n" x p;
+        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" x x (lower - 2047) p;
+      )
+      | t -> 
+      (
+        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x lower p;
+      )
+    )
   | NonTail(x), SetL(Id.L(y)) ->
     let ad = List.assoc (Id.L(y)) !address_env in
     let upper = ad / 4096 in
@@ -484,7 +503,8 @@ let output_float_table oc data =
           inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%%x6 %%x6 2047\n";
           inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" (Int32.sub l11_0 (Int32.of_string "0x7ff"));
         )
-      | _ -> 
+      | x when x = Int32.of_string "0" -> ()
+      | _ ->
         (
           inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" l11_0;
         )

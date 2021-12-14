@@ -47,11 +47,11 @@ let rec g env e =  (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
           let (l, _) = List.find (fun (_, d') -> d = d') !data in
           l
         with Not_found ->
-          let l = gen_offset_ft ()in
+          let l = gen_offset_ft () in
           data := (l, d) :: !data; (* 新しい浮動小数のラベルを生成して辞書に追加 *)
           l in
-      (* let x = Id.genid "l" in *)
-      (* Let((x, Type.Int), SetL(l), Ans(LdDF(x, C(0)), p), p) *)
+      (* let x = Id.genid "l" in
+      Let((x, Type.Int), SetL(l), Ans(Ld(x, 0), p), p) *)
       Ans(LdDF(reg_ftp, l), p)
   | Closure.Neg(x, p) -> Ans(Neg(x), p)
   | Closure.Add(x, y, p) -> Ans(Add(x, V(y)), p)
@@ -99,11 +99,6 @@ let rec g env e =  (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
                   (seq (St(z, x, 0), store_fv, p)), p)), p), p) (* z(ラベルlの命令アドレス)をヒープポインタの先頭に入れて,それ以降に自由変数もいれる *)
                   (* 結果として, 変数xには, クロージャの先頭のアドレスが入っている *)
   | Closure.AppCls(x, ys, p) -> (* 関数xをクロージャ経由で呼び出して, 引数ysに適用する *)
-      (
-        match p with
-        | p when p = 722 -> print_string ("\n\n!722 AppClosure "^x^"\n");
-        | _ -> ()
-      );
       let (int, float) = separate (List.map (fun y -> (y, M.find y env)) ys) in
       Ans(CallCls(x, int, float), p)
   | Closure.AppDir(Id.L(x), ys, p) ->
@@ -169,12 +164,6 @@ let rec g env e =  (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
       let tmp2 = Id.genid "tmp" in
       (match M.find x env with
       | Type.Array(Type.Unit) -> Ans(Nop, p)
-      (* | Type.Array(Type.Float) ->
-          Let((offset, Type.Int), Add(x, V(y)),
-              Ans(StDF(z, offset, C(0)), p), p) *)
-      (* | Type.Array(_) ->
-          Let((offset, Type.Int), Add(x, V(y)),
-              Ans(St(z, offset, C(0)), p), p) *)
       | Type.Array(Type.Float) ->
           Let((tmp, Type.Int), Set(2), 
             Let((tmp2, Type.Int), SLL(y, tmp),
@@ -197,7 +186,7 @@ let h { Closure.name = (Id.L(x), t); Closure.args = yts; Closure.formal_fv = zts
   let (offset, load) =
     expand
       zts (* クロージャ中の自由変数の集合の, (変数名, 型)のリストに対して *)
-      (4, g (M.add x t (M.add_list yts (M.add_list zts M.empty))) e) (* (4, [(x, t);(y1, t1); ...;(yn, tn);(z1, t1); ...(zn, tn)]) *)
+      (4, g (M.add x t (M.add_list yts (M.add_list zts !(GlobalVar.gtenv)))) e) (* (4, [(x, t);(y1, t1); ...;(yn, tn);(z1, t1); ...(zn, tn)]) *)
       (fun z offset load -> fletd(z, LdDF(x, offset), load, p))
       (* -> Let((z, Type.Float), LdDF(x, C(offset)), load, p) *)
       (fun z t offset load -> Let((z, t), Ld(x, offset), load, p)) in
@@ -208,6 +197,7 @@ let h { Closure.name = (Id.L(x), t); Closure.args = yts; Closure.formal_fv = zts
 
 (* プログラム全体の仮想マシンコード生成 (caml2html: virtual_f) *)
 let f (Closure.Prog(fundefs, e)) =
+  print_string "starting to virtualize the code...\n";
   data := [];
   let fundefs = List.map h fundefs in (* fundefを変換 *)
   let e = g M.empty e in (* 式の本体を変換 *)

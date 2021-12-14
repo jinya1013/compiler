@@ -62,27 +62,21 @@ min_caml_print_char:
 min_caml_sqrt:
     fsqrt %f1 %f1
     jr 0(%x1)
-    nop
 min_caml_floor:
     floor %f1 %f1
     jr 0(%x1)
-    nop
 min_caml_float_of_int:
     itof %f1 %x6
     jr 0(%x1)
-    nop
 min_caml_int_of_float:
     ftoi %x6 %f1
     jr 0(%x1)
-    nop
 min_caml_sra:
     sra %x6 %x6 %x7
     jr 0(%x1)
-    nop
 min_caml_sll:
     sll %x6 %x6 %x7
     jr 0(%x1)
-    nop
 min_caml_create_array:
     add %x8 %x0 %x3 # 先頭アドレスを%x8に入れる
     bne %x6 %x0 create_array_loop # %x6がゼロでないなら戻る

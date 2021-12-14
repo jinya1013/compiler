@@ -41,12 +41,9 @@ let get_pos = function
 
 let rec combine e1 e2 = 
   match e1 with
-| Let((x, t), f1, Unit(_), _) -> 
-  let p = get_pos e2 in Let((x, t), f1, e2, p)
-| LetRec({ name=(x, t); args=yts; body=f1 }, Unit(_), _) -> 
-  let p = get_pos e2 in LetRec({ name=(x, t); args=yts; body=f1 }, e2, p)
 | Let((x, t), f1, f2, _) -> Let((x, t), f1, combine f2 e2, 0)
 | LetRec({ name=(x, t); args=yts; body=f1 }, f2, _) -> LetRec({ name=(x, t); args=yts; body=f1 }, combine f2 e2, 0)
+| Unit(_) -> e2
 | _ -> raise CombineError
   
 

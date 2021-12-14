@@ -20,7 +20,9 @@ clean:: nobackup
 
 # ���⤷�������¤������?����˹�碌���Ѥ���
 SOURCES = float.c type.ml id.ml m.ml s.ml \
-syntax.ml parser.mly lexer.mll typing.mli typing.ml kNormal.mli kNormal.ml \
+syntax.ml parser.mly lexer.mll typing.mli typing.ml \
+globalVar.mli globalVar.ml \
+kNormal.mli kNormal.ml \
 alpha.mli alpha.ml beta.mli beta.ml assoc.mli assoc.ml \
 inline.mli inline.ml constFold.mli constFold.ml elim.mli elim.ml \
 rmExp.mli rmExp.ml \
@@ -29,7 +31,7 @@ simm.mli simm.ml regAlloc.mli regAlloc.ml emit.mli emit.ml \
 main.mli main.ml 
 
 # ���ƥ��ȥץ������?�������顢���������?
-TESTS = min-rt_cpuexp \
+TESTS = min-rt_cpuexp
 # fless ack_cps \
 # print fib sum-tail gcd sum fib ack even-odd \
 # adder funcomp cls-rec cls-bug cls-bug2 cls-reg-bug \
@@ -56,7 +58,9 @@ test/%.cmp: test/%.res test/%.ans
 	diff $^ > $@
 
 min-caml.html: main.mli main.ml id.ml m.ml s.ml \
-		syntax.ml type.ml parser.mly lexer.mll typing.mli typing.ml kNormal.mli kNormal.ml \
+		syntax.ml type.ml parser.mly lexer.mll typing.mli typing.ml \
+		globalVar.mli globalVar.ml \
+		kNormal.mli kNormal.ml \
 		alpha.mli alpha.ml beta.mli beta.ml assoc.mli assoc.ml \
 		inline.mli inline.ml constFold.mli constFold.ml elim.mli elim.ml \
 		closure.mli closure.ml asm.mli asm.ml virtual.mli virtual.ml \
