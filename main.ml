@@ -25,23 +25,25 @@ let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana
   Typing.extenv := M.empty;
   Emit.f outchan utils_s_chan
     (let r = RegAlloc.f
-      (let s = Simm.f
-        (let v = Virtual.f
-          (let c = Closure.f
-            (let i = iter !limit
-              (let a = Alpha.f
-                (let abc = RmExp.f 
-                  (let k = KNormal.f
-                    (let t = Typing.f
-                      p
-                    in output_string outchant "AFTER TYPING\n"; Syntax.output_prog outchant t; t)
-                  in output_string outchank "AFTER KNORMAL\n"; KNormal.output_prog outchank k; k)
-                in output_string outchank "AFTER REMOVE_COMMON_EXP\n"; KNormal.output_prog outchank abc; abc)
-              in output_string outchana "AFTER ALPHA_TRANSFORM\n"; KNormal.output_prog outchana a; a)
-            in output_string outchani "AFTER ITER\n"; KNormal.output_prog outchani i; i)
-          in output_string outchanc "AFTER CLOSURE_TRANSFORM\n"; Closure.output_prog outchanc c; c)
-        in output_string outchanv "AFTER VIRTUAL_TRANSFORM\n"; Asm.output_prog outchanv v; v)
-      in output_string outchans "AFTER SIMM\n"; Asm.output_prog outchans s; s)
+      (let ve = VirtualElim.f
+        (let s = Simm.f
+          (let v = Virtual.f
+            (let c = Closure.f
+              (let i = iter !limit
+                (let a = Alpha.f
+                  (let abc = RmExp.f 
+                    (let k = KNormal.f
+                      (let t = Typing.f
+                        p
+                      in output_string outchant "AFTER TYPING\n"; Syntax.output_prog outchant t; t)
+                    in output_string outchank "AFTER KNORMAL\n"; KNormal.output_prog outchank k; k)
+                  in output_string outchank "AFTER REMOVE_COMMON_EXP\n"; KNormal.output_prog outchank abc; abc)
+                in output_string outchana "AFTER ALPHA_TRANSFORM\n"; KNormal.output_prog outchana a; a)
+              in output_string outchani "AFTER ITER\n"; KNormal.output_prog outchani i; i)
+            in output_string outchanc "AFTER CLOSURE_TRANSFORM\n"; Closure.output_prog outchanc c; c)
+          in output_string outchanv "AFTER VIRTUAL_TRANSFORM\n"; Asm.output_prog outchanv v; v)
+        in output_string outchans "AFTER SIMM\n"; Asm.output_prog outchans s; s)
+      in output_string outchanr "AFTER VIRTUAL_ELIM\n"; Asm.output_prog outchanr ve; ve)
     in output_string outchanr "AFTER REGALLOC\n";Asm.output_prog outchanr r; r)
 
 let string s = 

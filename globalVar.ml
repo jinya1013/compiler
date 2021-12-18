@@ -47,7 +47,7 @@ let rec h x0 t0 x senv = function (* x0: gでの呼び出し元Letで定義さ�
     forward_address senv elem;
     let size = get_size senv elem in
     aenv := M.add x (len, size) !aenv;
-    output_string stdout ("#"^(string_of_int p)^" add ("^x0^", "^(string_of_int !gaddress)^") into genv\n");
+    (* output_string stdout ("#"^(string_of_int p)^" add ("^x0^", "^(string_of_int !gaddress)^") into genv\n"); *)
     genv := M.add x0 !gaddress !genv;
     gtenv := M.add x0 t0 !gtenv;
     gaddress := len * size + !gaddress;
@@ -56,7 +56,7 @@ let rec h x0 t0 x senv = function (* x0: gでの呼び出し元Letで定義さ�
   h x0 t0 x (M.add x (get_size senv e1) senv) e2
 | Tuple(xs, p) -> 
     let size = List.fold_left (fun b x -> b + (get_size senv x)) 0 xs in
-    output_string stdout ("#"^(string_of_int p)^" add ("^x0^", "^(string_of_int !gaddress)^") into genv\n");
+    (* output_string stdout ("#"^(string_of_int p)^" add ("^x0^", "^(string_of_int !gaddress)^") into genv\n"); *)
     genv := M.add x0 !gaddress !genv;
     gtenv := M.add x0 t0 !gtenv;
     gaddress := size + !gaddress;
