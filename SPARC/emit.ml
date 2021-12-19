@@ -484,7 +484,8 @@ let allocate_st_and_hp oc =
   inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%%x3 %%x3 %%x6\n";
   inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x6 %%x6 28\n";
   inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x2 %%x0 1\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%%x2 %%x2 %%x6\n"
+  inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%%x2 %%x2 %%x6\n";
+  inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s 2\n" reg2 zero_reg
 
 let output_float_table oc data = 
   inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x29 %%x0 -256\n";

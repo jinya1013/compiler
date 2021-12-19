@@ -131,22 +131,19 @@ let rec g env e =  (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
   | Closure.Get(x, y, p) -> (* 配列の読み出し (caml2html: virtual_get) *)
       let offset = Id.genid "o" in
       let tmp = Id.genid "tmp" in
-      let tmp2 = Id.genid "tmp" in
       (match M.find x env with
       | Type.Array(Type.Unit) -> Ans(Nop, p)
       | Type.Array(Type.Float) ->
-          Let((tmp, Type.Int), Set(2), 
-            Let((tmp2, Type.Int), SLL(y, tmp),
-              Let((offset, Type.Int), Add(x, V(tmp2)), (* offset = y * 4 とする *)
-                Ans(LdDF(offset, 0), p), p), p), p)
+            Let((tmp, Type.Int), SLL(y, reg2),
+              Let((offset, Type.Int), Add(x, V(tmp)), (* offset = y * 4 とする *)
+                Ans(LdDF(offset, 0), p), p), p)
       (* | Type.Array(_) ->
           Let((offset, Type.Int), Add(x, V(y)),
               Ans(Ld(x, C(0)), p), p) *)
       | Type.Array(_) ->
-          Let((tmp, Type.Int), Set(2), 
-            Let((tmp2, Type.Int), SLL(y, tmp),
-              Let((offset, Type.Int), Add(x, V(tmp2)), (* offset = y * 4 とする *)
-                Ans(Ld(offset, 0), p), p), p), p)
+            Let((tmp, Type.Int), SLL(y, reg2),
+              Let((offset, Type.Int), Add(x, V(tmp)), (* offset = y * 4 とする *)
+                Ans(Ld(offset, 0), p), p), p)
       | _ -> assert false)
   | Closure.Put(x, y, z, p) ->
       (* let offset = Id.genid "o" in
@@ -161,19 +158,16 @@ let rec g env e =  (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
       | _ -> assert false) *)
       let offset = Id.genid "o" in
       let tmp = Id.genid "tmp" in
-      let tmp2 = Id.genid "tmp" in
       (match M.find x env with
       | Type.Array(Type.Unit) -> Ans(Nop, p)
       | Type.Array(Type.Float) ->
-          Let((tmp, Type.Int), Set(2), 
-            Let((tmp2, Type.Int), SLL(y, tmp),
-              Let((offset, Type.Int), Add(x, V(tmp2)), (* offset = y * 4 とする *)
-                Ans(StDF(z, offset, 0), p), p), p), p)
+            Let((tmp, Type.Int), SLL(y, reg2),
+              Let((offset, Type.Int), Add(x, V(tmp)), (* offset = y * 4 とする *)
+                Ans(StDF(z, offset, 0), p), p), p)
       | Type.Array(_) ->
-          Let((tmp, Type.Int), Set(2), 
-            Let((tmp2, Type.Int), SLL(y, tmp),
-              Let((offset, Type.Int), Add(x, V(tmp2)), (* offset = y * 4 とする *)
-                Ans(St(z, offset, 0), p), p), p), p)
+            Let((tmp, Type.Int), SLL(y, reg2),
+              Let((offset, Type.Int), Add(x, V(tmp)), (* offset = y * 4 とする *)
+                Ans(St(z, offset, 0), p), p), p)
       | _ -> assert false)
   | Closure.ExtArray(Id.L(x), p) -> Ans(SetL(Id.L("min_caml_" ^ x)), p)
 
