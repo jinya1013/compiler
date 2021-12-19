@@ -8,6 +8,8 @@ type t = (* K正規化後の式 (caml2html: knormal_t) *)
   | Add of Id.t * Id.t * Syntax.pos
   | Sub of Id.t * Id.t * Syntax.pos
   | FNeg of Id.t * Syntax.pos
+  | FSqrt of Id.t * Syntax.pos
+  | Floor of Id.t * Syntax.pos
   | FAdd of Id.t * Id.t * Syntax.pos
   | FSub of Id.t * Id.t * Syntax.pos
   | FMul of Id.t * Id.t * Syntax.pos
@@ -28,7 +30,7 @@ and fundef = { name : Id.t * Type.t; args : (Id.t * Type.t) list; body : t }
 
 let rec fv = function (* 式に出現する（自由な）変数 (caml2html: knormal_fv) *)
   | Unit(p) | Int(_, p) | Float(_, p) | ExtArray(_, p) -> S.empty
-  | Neg(x, p) | FNeg(x, p) -> S.singleton x
+  | Neg(x, p) | FNeg(x, p) | FSqrt(x, p) | Floor(x, p) -> S.singleton x
   | Add(x, y, p) | Sub(x, y, p) | FAdd(x, y, p) | FSub(x, y, p) | FMul(x, y, p) | FDiv(x, y, p) | Get(x, y, p) -> S.of_list [x; y]
   | IfEq(x, y, e1, e2, p) | IfLE(x, y, e1, e2, p) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
   | Let((x, t), e1, e2, p) -> S.union (fv e1) (S.remove x (fv e2))
@@ -40,51 +42,6 @@ let rec fv = function (* 式に出現する（自由な）変数 (caml2html: knormal_fv) *)
   | Tuple(xs, p) | ExtFunApp(_, xs, p) -> S.of_list xs
   | Put(x, y, z, p) -> S.of_list [x; y; z]
   | LetTuple(xs, y, e, p) -> S.add y (S.diff (fv e) (S.of_list (List.map fst xs)))
-
-(* let rec fv = function (* 式に出現する（自由な）変数 (caml2html: knormal_fv) *)
-  | Unit(p) | Int(_, p) | Float(_, p) | ExtArray(_, p) -> S.empty
-  | Neg(x, p) | FNeg(x, p) -> 
-  (
-    match x with
-    | s when M.mem s !(GlobalVar.genv) -> S.empty
-    | _ -> S.singleton x
-  )
-  | Add(x, y, p) | Sub(x, y, p) | FAdd(x, y, p) | FSub(x, y, p) | FMul(x, y, p) | FDiv(x, y, p) | Get(x, y, p) -> 
-  (
-    match x, y with
-    | s, t when M.mem s !(GlobalVar.genv) && M.mem t !(GlobalVar.genv) -> S.empty
-    | s, t when M.mem s !(GlobalVar.genv) -> S.singleton t
-    | s, t when M.mem t !(GlobalVar.genv) -> S.singleton s
-    | _, _ -> S.of_list [x; y]
-  )
-  | IfEq(x, y, e1, e2, p) | IfLE(x, y, e1, e2, p) ->
-  (
-    match x, y with
-    | s, t when M.mem s !(GlobalVar.genv) && M.mem t !(GlobalVar.genv) -> S.union (fv e1) (fv e2)
-    | s, t when M.mem s !(GlobalVar.genv) -> (S.add y (S.union (fv e1) (fv e2)))
-    | s, t when M.mem t !(GlobalVar.genv) -> (S.add x (S.union (fv e1) (fv e2)))
-    | _, _ -> S.add x (S.add y (S.union (fv e1) (fv e2)))
-  )
-  | Let((x, t), e1, e2, p) -> S.union (fv e1) (S.remove x (fv e2))
-  | Var(x, p) ->
-  (
-    match x with
-    | s when M.mem s !(GlobalVar.genv) -> S.empty
-    | _ -> S.singleton x
-  )
-  | LetRec({ name = (x, t); args = yts; body = e1 }, e2, p) ->
-      let zs = S.diff (fv e1) (S.of_list (List.map fst yts)) in
-      S.diff (S.union zs (fv e2)) (S.singleton x)
-  | App(x, ys, p) -> 
-    let xys' = List.filter (fun x -> M.mem x !(GlobalVar.genv)) (x :: y)
-    in S.of_list xys'
-  | Tuple(xs, p) | ExtFunApp(_, xs, p) -> 
-    let xs' = List.filter (fun x -> M.mem x !(GlobalVar.genv)) xs
-    in S.of_list xs'
-  | Put(x, y, z, p) -> 
-    let xyz' = List.filter (fun x -> M.mem x !(GlobalVar.genv)) [x; y; z]
-    in S.of_list xyz'
-  | LetTuple(xs, y, e, p) -> S.add y (S.diff (fv e) (S.of_list (List.map fst xs))) *)
 
 let insert_let p (e, t) k = (* letを挿入する補助関数 (caml2html: knormal_insert) *)
 (* 
@@ -144,6 +101,12 @@ let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
   | Syntax.FNeg(e, p) ->
       insert_let p (g env e)
         (fun x -> FNeg(x, p), Type.Float)
+  | Syntax.FSqrt(e, p) ->
+      insert_let p (g env e)
+        (fun x -> FSqrt(x, p), Type.Float)
+  | Syntax.Floor(e, p) ->
+      insert_let p (g env e)
+        (fun x -> Floor(x, p), Type.Float)
   | Syntax.FAdd(e1, e2, p) ->
       insert_let p (g env e1)
         (fun x -> insert_let p (g env e2)
@@ -182,7 +145,7 @@ let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
       let e1', t1 = g env e1 in
       let e2', t2 = g (M.add x t env) e2 in
       Let((x, t), e1', e2', p), t2
-  | Syntax.Var(x, p) when M.mem x !GlobalVar.genv -> Int(M.find x !GlobalVar.genv, p), M.find x !GlobalVar.gtenv
+  | Syntax.Var(x, p) when M.mem x !GlobalVar.genv -> Int(M.find x !GlobalVar.genv, p), M.find x !GlobalVar.gtenv (* グローバル変数をあらかじめ確保したメモリ上のアドレスに変換 *)
   | Syntax.Var(x, p) when M.mem x env -> Var(x, p), M.find x env
   | Syntax.Var(x, p) -> (* 外部配列の参照 (caml2html: knormal_extarray) *)
       (match M.find x !Typing.extenv with
@@ -239,33 +202,6 @@ let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
                 | Type.Float -> "create_float_array"
                 | _ -> "create_array" in
               ExtFunApp(l, [x; y], p), Type.Array(t2)))
-  (* | Syntax.Get(e1, e2, p) ->
-      (
-        match g env e1 with
-      |        Var(x, q), Type.Array(t) when M.mem x !(GlobalVar.genv) ->
-          insert_let p (Int(M.find x !(GlobalVar.genv), q), Type.Int)
-            (fun x -> insert_let p (g env e2)
-                (fun y -> Get(x, y, p), t))
-      |        _, Type.Array(t) as g_e1 ->
-          insert_let p g_e1
-            (fun x -> insert_let p (g env e2)
-                (fun y -> Get(x, y, p), t))
-      | _ -> assert false
-      )
-  | Syntax.Put(e1, e2, e3, p) ->
-      (
-        match g env e1 with
-      | Var(x, q), Type.Array(t) when M.mem x !(GlobalVar.genv) ->
-          insert_let p (Int(M.find x !(GlobalVar.genv), q), Type.Int)
-          (fun x -> insert_let p(g env e2)
-            (fun y -> insert_let p (g env e3)
-                (fun z -> Put(x, y, z, p), Type.Unit)))
-      | g_e1 -> 
-        insert_let p (g_e1)
-          (fun x -> insert_let p(g env e2)
-              (fun y -> insert_let p (g env e3)
-                  (fun z -> Put(x, y, z, p), Type.Unit)))
-      ) *)
   | Syntax.Get(e1, e2, p) ->
       (
         match g env e1 with
@@ -344,6 +280,18 @@ let rec output_knormal outchan k depth =
   (
     Id.output_tab2 outchan depth p;
     output_string outchan "FNEG ";
+    Id.output_id outchan t;
+  )
+  | FSqrt (t, p) -> 
+  (
+    Id.output_tab2 outchan depth p;
+    output_string outchan "FSQRT ";
+    Id.output_id outchan t;
+  )
+  | Floor (t, p) -> 
+  (
+    Id.output_tab2 outchan depth p;
+    output_string outchan "FLOOR ";
     Id.output_id outchan t;
   )
   | FAdd (t1, t2, p) ->
@@ -547,6 +495,18 @@ and output_prog outchan k =
   (
     output_string outchan ((string_of_int p) ^ "\t");
     output_string outchan "FNEG ";
+    Id.output_id outchan t;
+  )
+  | FSqrt (t, p) -> 
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FSQRT ";
+    Id.output_id outchan t;
+  )
+  | Floor (t, p) -> 
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FLOOR ";
     Id.output_id outchan t;
   )
   | FAdd (t1, t2, p) ->

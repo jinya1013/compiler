@@ -16,6 +16,8 @@ and exp = (* °ì¤Ä°ì¤Ä¤ÎÌ¿Îá¤ËÂÐ±þ¤¹¤ë¼° (caml2html: sparcasm_exp) *)
   | St of Id.t * Id.t * int
   | FMovD of Id.t
   | FNegD of Id.t
+  | FSqrtD of Id.t
+  | FloorD of Id.t
   | FAddD of Id.t * Id.t
   | FSubD of Id.t * Id.t
   | FMulD of Id.t * Id.t
@@ -84,7 +86,7 @@ let rec remove_and_uniq xs = function (* ¥ê¥¹¥Èys¤ÎÍ×ÁÇ¤«¤é¥À¥Ö¤ê¤òÌµ¤¯¤·¤Æ, ½¸¹
 let fv_id_or_imm = function V(x) -> [x] | _ -> [] (* ¥Ç¡¼¥¿·¿id_or_imm¤Ë´Þ¤Þ¤ì¤ë¼«Í³ÊÑ¿ô¤Î½¸¹ç¤òÊÖ¤¹´Ø¿ô. id.t·¿¤Ê¤é, ¤½¤ÎÃÍ¤À¤±¤«¤é¤Ê¤ë¥ê¥¹¥È, Â¨ÃÍ¤Ê¤é¶õ¥ê¥¹¥È¤òÊÖ¤¹. *)
 let rec fv_exp = function
   | Nop | Set(_) | SetL(_) | Comment(_) | Restore(_) -> []
-  | Mov(x) | Neg(x) | FMovD(x) | FNegD(x) | Save(x, _) -> [x]
+  | Mov(x) | Neg(x) | FMovD(x) | FNegD(x) | FSqrtD(x) | FloorD(x) | Save(x, _) -> [x]
   | Add(x, y') | Sub(x, y') -> x :: fv_id_or_imm y'
   | SLL(x, y') -> x :: fv_id_or_imm (V(y'))
   | Ld(x, y') | LdDF(x, y') -> [x]
@@ -214,6 +216,18 @@ and output_exp outchan depth p = function
   (
     Id.output_tab2 outchan depth p;
     output_string outchan "FNEGD ";
+    Id.output_id outchan x
+  )
+  | FSqrtD (x) ->
+  (
+    Id.output_tab2 outchan depth p;
+    output_string outchan "FSQRTD ";
+    Id.output_id outchan x
+  )
+  | FloorD (x) ->
+  (
+    Id.output_tab2 outchan depth p;
+    output_string outchan "FLOORD ";
     Id.output_id outchan x
   )
   | FAddD (x, c) ->

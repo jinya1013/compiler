@@ -15,6 +15,8 @@ and exp =
   | St of Id.t * Id.t * int
   | FMovD of Id.t
   | FNegD of Id.t
+  | FSqrtD of Id.t
+  | FloorD of Id.t
   | FAddD of Id.t * Id.t
   | FSubD of Id.t * Id.t
   | FMulD of Id.t * Id.t

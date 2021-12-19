@@ -7,6 +7,8 @@ type t = (* クロージャ変換後の式 (caml2html: closure_t) *)
   | Add of Id.t * Id.t * Syntax.pos
   | Sub of Id.t * Id.t * Syntax.pos
   | FNeg of Id.t * Syntax.pos
+  | FSqrt of Id.t * Syntax.pos
+  | Floor of Id.t * Syntax.pos
   | FAdd of Id.t * Id.t * Syntax.pos
   | FSub of Id.t * Id.t * Syntax.pos
   | FMul of Id.t * Id.t * Syntax.pos

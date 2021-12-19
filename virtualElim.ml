@@ -17,6 +17,8 @@ let rec fv_h = function
   | St(x, y, i) -> S.of_list [x; y]
   | FMovD(x) -> S.singleton x
   | FNegD(x) -> S.singleton x
+  | FSqrtD(x) -> S.singleton x
+  | FloorD(x) -> S.singleton x
   | FAddD(x, y) -> S.of_list [x; y]
   | FSubD(x, y) -> S.of_list [x; y]
   | FMulD(x, y) -> S.of_list [x; y]

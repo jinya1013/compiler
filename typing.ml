@@ -70,6 +70,8 @@ let rec deref_term =
   | Eq(e1, e2, p) -> Eq(deref_term e1, deref_term e2, p)
   | LE(e1, e2, p) -> LE(deref_term e1, deref_term e2, p)
   | FNeg(e, p) -> FNeg(deref_term e, p)
+  | FSqrt(e, p) -> FSqrt(deref_term e, p)
+  | Floor(e, p) -> Floor(deref_term e, p)
   | FAdd(e1, e2, p) -> FAdd(deref_term e1, deref_term e2, p)
   | FSub(e1, e2, p) -> FSub(deref_term e1, deref_term e2, p)
   | FMul(e1, e2, p) -> FMul(deref_term e1, deref_term e2, p)
@@ -180,6 +182,12 @@ let rec g env e = (* 型推論ルーチン *)
         unify p Type.Int (g env e2);
         Type.Int
     | FNeg(e, p) ->
+        unify p Type.Float (g env e);
+        Type.Float
+    | FSqrt(e, p) ->
+        unify p Type.Float (g env e);
+        Type.Float
+    | Floor(e, p) ->
         unify p Type.Float (g env e);
         Type.Float
     | FAdd(e1, e2, p) | FSub(e1, e2, p) | FMul(e1, e2, p) | FDiv(e1, e2, p) ->

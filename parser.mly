@@ -45,6 +45,8 @@ let addtyp x = (x, Type.gentyp ())
 %token F_NEG
 %token F_SQR
 %token F_HALF
+%token SQRT
+%token FLOOR
 %token EOF
 
 
@@ -60,7 +62,7 @@ let addtyp x = (x, Type.gentyp ())
 %left EQUAL LESS_GREATER LESS GREATER LESS_EQUAL GREATER_EQUAL F_LESS
 %left PLUS MINUS PLUS_DOT MINUS_DOT
 %left AST SLASH AST_DOT SLASH_DOT
-%nonassoc F_IS_POS F_IS_NEG F_IS_ZERO F_ABS F_NEG F_SQR F_HALF
+%nonassoc F_IS_POS F_IS_NEG F_IS_ZERO F_ABS F_NEG F_SQR F_HALF SQRT FLOOR
 %right prec_unary_minus
 %left prec_app
 %left DOT
@@ -158,6 +160,10 @@ exp: /* (* ∞Ï»Ã§Œº∞ (caml2html: parser_exp) *) */
     { FMul($2, $2, (Parsing.symbol_start_pos ()).pos_lnum) }
 | F_HALF exp
     { FDiv($2, Float(2.0, (Parsing.symbol_start_pos ()).pos_lnum), (Parsing.symbol_start_pos ()).pos_lnum) }
+| SQRT exp
+    { FSqrt($2, (Parsing.symbol_start_pos ()).pos_lnum) }
+| FLOOR exp
+    { Floor($2, (Parsing.symbol_start_pos ()).pos_lnum) }
 | LET IDENT EQUAL exp IN exp SEMICOLON
     %prec prec_let
     { Let(addtyp $2, $4, $6, (Parsing.symbol_start_pos ()).pos_lnum) }

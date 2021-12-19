@@ -14,7 +14,9 @@ type t = (* MinCamlの構文を表現するデータ型 (caml2html: syntax_t) *)
   | FAdd of t * t * pos 
   | FSub of t * t * pos 
   | FMul of t * t * pos 
-  | FDiv of t * t * pos 
+  | FDiv of t * t * pos
+  | FSqrt of t * pos
+  | Floor of t * pos
   | Eq of t * t * pos 
   | LE of t * t * pos 
   | If of t * t * t * pos 
@@ -34,7 +36,7 @@ let top_pos:pos = 0
 
 let get_pos = function
   | Unit(p) -> p
-  | Bool (_, p) | Int (_, p) | Float (_, p) | Not (_, p) | Neg (_, p) | FNeg (_, p) | Var (_, p) | Tuple (_, p) -> p
+  | Bool (_, p) | Int (_, p) | Float (_, p) | Not (_, p) | Neg (_, p) | FNeg (_, p) | FSqrt (_, p) | Floor (_, p) | Var (_, p) | Tuple (_, p) -> p
   | Add (_, _, p) | Sub (_, _, p) | FAdd (_, _, p) | FSub (_, _, p) | FMul (_, _, p) | FDiv (_, _, p) | LetRec (_, _, p) | App (_, _, p) -> p
   | Eq (_, _, p) | LE (_, _, p) | Array (_, _, p) | Get (_, _, p) -> p
   | If (_, _, _, p) | Let (_, _, _, p) | LetTuple (_, _, _, p) | Put (_, _, _, p) -> p
@@ -150,6 +152,18 @@ let rec output_syntax outchan s depth =
     output_string outchan "FDIV";
     output_syntax outchan t1 (depth + 1);
     output_syntax outchan t2 (depth + 1);
+  )
+   | FSqrt (t,p) ->
+  (
+    Id.output_tab2 outchan depth p;
+    output_string outchan "FSQRT";
+    output_syntax outchan t (depth + 1);
+  )
+   | Floor (t,p) ->
+  (
+    Id.output_tab2 outchan depth p;
+    output_string outchan "FLOOR";
+    output_syntax outchan t (depth + 1);
   )
   | Eq (t1, t2, p) ->
   (
@@ -362,6 +376,18 @@ and output_prog outchan s =
     output_string outchan "FDIV";
     output_syntax outchan t1 1;
     output_syntax outchan t2 1;
+  )
+  | FSqrt (t,p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FSQRT";
+    output_syntax outchan t 1;
+  )
+  | Floor (t,p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "FLOOR";
+    output_syntax outchan t 1;
   )
   | Eq (t1, t2, p) ->
   (

@@ -59,12 +59,6 @@ min_caml_print_char:
     addi %x7 %x7 -3 #ロード可能かどうかのフラグが格納されているアドレス x7 <- 0x100000 - 3
     sb %x6 2(%x7) # 1だったらデータを1バイト書く
     jr 0(%x1)
-min_caml_sqrt:
-    fsqrt %f1 %f1
-    jr 0(%x1)
-min_caml_floor:
-    floor %f1 %f1
-    jr 0(%x1)
 min_caml_float_of_int:
     itof %f1 %x6
     jr 0(%x1)

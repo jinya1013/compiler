@@ -90,6 +90,10 @@ rule token = parse
     { F_SQR }
 | "fhalf"
     { F_HALF }
+| "sqrt"
+    { SQRT }
+| "floor"
+    { FLOOR }
 | ','
     { COMMA }
 | '_'
