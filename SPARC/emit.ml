@@ -541,4 +541,4 @@ let f oc ic (Prog(data, fundefs, e)) =
   allocate_st_and_hp oc;
   stackset := S.empty;
   stackmap := [];
-  g oc (NonTail("%%x0"), e);
+  g oc (NonTail(zero_reg), e);

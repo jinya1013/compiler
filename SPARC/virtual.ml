@@ -147,7 +147,7 @@ let rec g env e =  (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
               Let((offset, Type.Int), Add(x, V(tmp)), (* offset = y * 4 とする *)
                 Ans(Ld(offset, 0), p), p), p)
       | _ -> assert false)
-  | Closure.Put(x, y, z, p) ->
+  | Closure.Put(x, y, z, p) -> (* 配列xのy番目をzに変更する *)
       (* let offset = Id.genid "o" in
       (match M.find x env with
       | Type.Array(Type.Unit) -> Ans(Nop, p)

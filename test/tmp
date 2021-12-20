@@ -1,18 +1,12 @@
-1944 LETREC 
-1944 {
-1944  name = write_rgb_element.3109
-1944  args = (x.3110)
-1944  body = 
-1945   LET ix.3755
-1945    EXTFUNAPP int_of_float x.3110
-1946    LET Ti525.3757
-1946     INT 255
-1946     LET elem.3756
-1946      IFLE ix.3755 Ti525.3757
-1946       LET Ti526.3758
-1946        INT 0
-1946        IFLE Ti526.3758 ix.3755
-1946         VAR ix.3755
-1946         INT 0
-1946       INT 255
-1947      APP print_int.2716 elem.3756
+1891                           ANS
+1891                            IFEQ Ti564.3799.12949 sid_center.3795.12933
+1892                             ANS
+1892                              SET 1
+1893                             ANS
+1893                              SET 0
+1894                   ANS
+1894                    SET 0
+1895         ANS
+1895          SET 0
+1896    ANS
+1896     SET 0  

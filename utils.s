@@ -29,7 +29,7 @@ min_caml_read_float:
     addi %x8 %x0 20
     addi %x9 %x0 8
     sll %x7 %x7 %x8
-    addi %x7 %x7 -3 #ロード可能かどうかのフラグが格納されているアドレス
+    addi %x7 %x7 -3 # ロード可能かどうかのフラグが格納されているアドレス
 load_float_size1:
     lbu %x8 0(%x7) # フラグを読む
     beq %x8 %x0 load_float_size1 # フラグがゼロだったら読み直し
@@ -57,7 +57,7 @@ min_caml_print_char:
     addi %x8 %x0 20 # x8 <- 20
     sll %x7 %x7 %x8 # x7 <- 0x100000
     addi %x7 %x7 -3 #ロード可能かどうかのフラグが格納されているアドレス x7 <- 0x100000 - 3
-    sb %x6 2(%x7) # 1だったらデータを1バイト書く
+    sb %x6 2(%x7) # データを1バイト書く
     jr 0(%x1)
 min_caml_float_of_int:
     itof %f1 %x6

@@ -213,10 +213,10 @@ let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
       )
   | Syntax.Put(e1, e2, e3, p) ->
       (
-        insert_let p (g env e1)
-          (fun x -> insert_let p(g env e2)
-              (fun y -> insert_let p (g env e3)
-                  (fun z -> Put(x, y, z, p), Type.Unit)))
+        insert_let p (g env e3)
+          (fun z -> insert_let p(g env e2)
+              (fun y -> insert_let p (g env e1)
+                  (fun x -> Put(x, y, z, p), Type.Unit)))
       )
       
 
