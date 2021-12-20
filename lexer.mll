@@ -74,6 +74,10 @@ rule token = parse
     { IN }
 | "rec"
     { REC }
+| "loop"
+    { LOOP }
+| "recur"
+    { RECUR }
 | "fispos"
     { F_IS_POS }
 | "fisneg"

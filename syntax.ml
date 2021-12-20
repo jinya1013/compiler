@@ -29,6 +29,8 @@ type t = (* MinCamlの構文を表現するデータ型 (caml2html: syntax_t) *)
   | Array of t * t * pos
   | Get of t * t * pos
   | Put of t * t * t * pos
+  | Loop of (Id.t * Type.t) * t * pos
+  | Recur of t * pos
 and fundef = { name : Id.t * Type.t; args : (Id.t * Type.t) list; body : t }
 
 let none_pos:pos = -1

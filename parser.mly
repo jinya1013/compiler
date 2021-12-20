@@ -30,6 +30,8 @@ let addtyp x = (x, Type.gentyp ())
 %token LET
 %token IN
 %token REC
+%token LOOP
+%token RECUR
 %token COMMA
 %token ARRAY_CREATE
 %token DOT
@@ -53,6 +55,7 @@ let addtyp x = (x, Type.gentyp ())
 
 /* (* 優先順位とassociativityの定義（低い方から高い方へ） (caml2html: parser_prior) *) */
 %nonassoc IN
+%nonassoc LOOP RECUR
 %right prec_let
 %right SEMICOLON
 %right prec_if
@@ -100,7 +103,6 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
     { match $2 with
     | Float(f, p) -> Float((-.f), p) (* -1.23などは型エラーではないので別扱い *)
     | e -> (Neg(e, (Parsing.symbol_start_pos ()).pos_lnum)) }
-
 | F_NEG exp
     { FMul(Float(-1.0, (Parsing.symbol_start_pos ()).pos_lnum), $2, (Parsing.symbol_start_pos ()).pos_lnum) }
 
@@ -190,6 +192,10 @@ exp: /* (* 一般の式 (caml2html: parser_exp) *) */
 | ARRAY_CREATE simple_exp simple_exp
     %prec prec_app
     { Array($2, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
+| LOOP IDENT EQUAL exp IN exp
+    { Loop($2, $4, $5, (Parsing.symbol_start_pos ()).pos_lnum) }
+| RECUR exp
+    { Recur($2, (Parsing.symbol_start_pos ()).pos_lnum) }
 | error
     { failwith
         (Printf.sprintf "parse error near characters %d-%d in line %d-%d"
