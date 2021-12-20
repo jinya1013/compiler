@@ -6,6 +6,7 @@ exception Unify of Type.t * Type.t * Syntax.pos
 exception Error of t * Type.t * Type.t * Syntax.pos
 
 let extenv = ref M.empty
+let stack = ref (Stack.create())
 
 (* for pretty printing (and type normalization) *)
 let rec deref_typ = (* 型変数を中身でおきかえる関数 *)
@@ -78,6 +79,8 @@ let rec deref_term =
   | FDiv(e1, e2, p) -> FDiv(deref_term e1, deref_term e2, p)
   | If(e1, e2, e3, p) -> If(deref_term e1, deref_term e2, deref_term e3, p)
   | Let(xt, e1, e2, p) -> Let(deref_id_typ xt, deref_term e1, deref_term e2, p)
+  | Loop(xt, e1, e2, p) -> Loop(deref_id_typ xt, deref_term e1, deref_term e2, p)
+  | Recur(e, p) -> Recur(deref_term e, p)
   | LetRec({ name = xt; args = yts; body = e1 }, e2, p) ->
       LetRec({ name = deref_id_typ xt;
                args = List.map deref_id_typ yts;
@@ -206,6 +209,14 @@ let rec g env e = (* 型推論ルーチン *)
     | Let((x, t), e1, e2, p) -> (* letの型推論 *)
         unify p t (g env e1);
         g (M.add x t env) e2
+
+    | Loop((x, t), e1, e2, p) -> (* Loopの型推論 *)
+        unify p t (g env e1);
+        Stack.push t !stack; (* スタックにtを追加 *)
+        g (M.add x t env) e2
+    | Recur(e, p) -> (* Recurの型推論 *)
+        unify (Stack.pop !stack) (g env e) (* スタックの先頭(直前のループ宣言)と単一化 *)
+
     | Var(x, p) when M.mem x env -> M.find x env (* 変数の型推論 *)
     | Var(x, p) when M.mem x !extenv -> M.find x !extenv
     | Var(x, p) -> (* 外部変数の型推論 *)

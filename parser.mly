@@ -193,7 +193,7 @@ exp: /* (* ∞Ï»Ã§Œº∞ (caml2html: parser_exp) *) */
     %prec prec_app
     { Array($2, $3, (Parsing.symbol_start_pos ()).pos_lnum) }
 | LOOP IDENT EQUAL exp IN exp
-    { Loop($2, $4, $5, (Parsing.symbol_start_pos ()).pos_lnum) }
+    { Loop(addtyp $2, $4, $5, (Parsing.symbol_start_pos ()).pos_lnum) }
 | RECUR exp
     { Recur($2, (Parsing.symbol_start_pos ()).pos_lnum) }
 | error

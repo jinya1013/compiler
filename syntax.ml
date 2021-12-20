@@ -29,7 +29,7 @@ type t = (* MinCamlの構文を表現するデータ型 (caml2html: syntax_t) *)
   | Array of t * t * pos
   | Get of t * t * pos
   | Put of t * t * t * pos
-  | Loop of (Id.t * Type.t) * t * pos
+  | Loop of (Id.t * Type.t) * t * t * pos
   | Recur of t * pos
 and fundef = { name : Id.t * Type.t; args : (Id.t * Type.t) list; body : t }
 
@@ -49,7 +49,25 @@ let rec combine e1 e2 =
 | LetRec({ name=(x, t); args=yts; body=f1 }, f2, _) -> LetRec({ name=(x, t); args=yts; body=f1 }, combine f2 e2, 0)
 | Unit(_) -> e2
 | _ -> raise CombineError
-  
+
+(* Recur式がループの末尾にあるかチェックする関数 *)
+let rec recur_check is_tail = function
+  | Unit _ | Bool _ | Int _ | Float _  | Var _ -> ()
+  | Not(e, _) | Neg(e, _) | FNeg(e, _) | FSqrt(e, _) | Floor(e, _) -> recur_check false e
+  | Add(e1, e2, _)  | Sub(e1, e2, _)  | FAdd(e1, e2, _)  | FSub(e1, e2, _)
+  | FMul(e1, e2, _)  | FDiv(e1, e2, _) | Eq(e1, e2, _)  | LE(e1, e2, _)
+  | Array(e1, e2, _) | Get(e1, e2, _) -> recur_check false e1; recur_check false e2
+  | Put(e1, e2, e3, _) -> recur_check false e1; recur_check false e2; recur_check false e3
+  | App(x, ys, _) -> recur_check false x; List.iter (recur_check false) ys
+  | Tuple(xs, _) -> List.iter (recur_check false) xs
+  | If(c, e1, e2, _) -> recur_check false c; recur_check is_tail e1; recur_check is_tail e2;
+  | Let((x, t), e1, e2, _) -> recur_check false e1; recur_check is_tail e2
+  | LetRec({ name = (x, t); args = yts; body = e1 }, e2, _) -> recur_check false e1; recur_check is_tail e2
+  | LetTuple(xts, e1, e2, _) -> recur_check false e1; recur_check is_tail e2
+  | Loop((x, t), e1, e2) -> recur_check false e1; recur_check true e2
+  | Recur(e, _) -> 
+    if (not is_tail) then raise (NotTailErr "Recur expression is not used in the tail position.") 
+    else recur_check false e
 
 let rec output_syntax outchan s depth = 
 (* 
@@ -270,6 +288,20 @@ let rec output_syntax outchan s depth =
     output_syntax outchan t1 (depth + 1);
     output_syntax outchan t2 (depth + 1);
     output_syntax outchan t3 (depth + 1);
+  )
+  | Loop (xt, t1, t2, p) ->
+  (
+    Id.output_tab2 outchan depth p;
+    output_string outchan "LOOP";
+    Id.output_id outchan (fst xt);
+    output_syntax outchan t1 (depth + 1);
+    output_syntax outchan t2 (depth + 1);
+  )
+  | Recur(t, p) ->
+  (
+    Id.output_tab2 outchan depth p;
+    output_string outchan "RECUR";
+    output_syntax outchan t (depth + 1);
   )
 and output_syntax_list outchan ts depth = 
   let f t = 
@@ -494,6 +526,20 @@ and output_prog outchan s =
     output_syntax outchan t1 1;
     output_syntax outchan t2 1;
     output_syntax outchan t3 1;
+  )
+  | Loop (xt, t1, t2, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "LOOP";
+    Id.output_id outchan (fst xt);
+    output_syntax outchan t1 1;
+    output_syntax outchan t2 1;
+  )
+  | Recur(t, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "RECUR";
+    output_syntax outchan t 1;
   )
   );
   output_string outchan "\n";
