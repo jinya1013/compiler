@@ -17,6 +17,8 @@ type t = (* K正規化後の式 (caml2html: knormal_t) *)
   | IfEq of Id.t * Id.t * t * t  * Syntax.pos (* 比較 + 分岐 (caml2html: knormal_branch) *)
   | IfLE of Id.t * Id.t * t * t  * Syntax.pos (* 比較 + 分岐 *)
   | Let of (Id.t * Type.t) * t * t  * Syntax.pos
+  | Loop of (Id.t * Type.t) * t * t  * Syntax.pos
+  | Recur of Id.t * Syntax.pos
   | Var of Id.t * Syntax.pos
   | LetRec of fundef * t * Syntax.pos
   | App of Id.t * Id.t list * Syntax.pos
@@ -34,6 +36,8 @@ let rec fv = function (* 式に出現する（自由な）変数 (caml2html: knormal_fv) *)
   | Add(x, y, p) | Sub(x, y, p) | FAdd(x, y, p) | FSub(x, y, p) | FMul(x, y, p) | FDiv(x, y, p) | Get(x, y, p) -> S.of_list [x; y]
   | IfEq(x, y, e1, e2, p) | IfLE(x, y, e1, e2, p) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
   | Let((x, t), e1, e2, p) -> S.union (fv e1) (S.remove x (fv e2))
+  | Loop((x, t), e1, e2, p) -> S.union (fv e1) (S.remove x (fv e2))
+  | Recur(x, p) -> S.singleton x
   | Var(x, p) -> S.singleton x
   | LetRec({ name = (x, t); args = yts; body = e1 }, e2, p) ->
       let zs = S.diff (fv e1) (S.of_list (List.map fst yts)) in
@@ -145,6 +149,13 @@ let rec g env = function (* K正規化ルーチン本体 (caml2html: knormal_g) *)
       let e1', t1 = g env e1 in
       let e2', t2 = g (M.add x t env) e2 in
       Let((x, t), e1', e2', p), t2
+  | Syntax.Loop((x, t), e1, e2, p) ->
+      let e1', t1 = g env e1 in
+      let e2', t2 = g (M.add x t env) e2 in
+      Loop((x, t), e1', e2', p), t2
+  | Syntax.Recur(x, p) ->
+      let (x', t) = g env x in
+      insert_let p (x', t) (fun x -> Recur(x, p), t)
   | Syntax.Var(x, p) when M.mem x !GlobalVar.genv -> Int(M.find x !GlobalVar.genv, p), M.find x !GlobalVar.gtenv (* グローバル変数をあらかじめ確保したメモリ上のアドレスに変換 *)
   | Syntax.Var(x, p) when M.mem x env -> Var(x, p), M.find x env
   | Syntax.Var(x, p) -> (* 外部配列の参照 (caml2html: knormal_extarray) *)
@@ -353,6 +364,20 @@ let rec output_knormal outchan k depth =
     Id.output_id outchan (fst t1);
     output_knormal outchan t2 (depth + 1);
     output_knormal outchan t3 (depth + 1);
+  )
+  | Loop (t1, t2, t3, p) ->
+  (
+    Id.output_tab2 outchan depth p;
+    output_string outchan "LOOP ";
+    Id.output_id outchan (fst t1);
+    output_knormal outchan t2 (depth + 1);
+    output_knormal outchan t3 (depth + 1);
+  )
+  | Recur (t, p) ->
+  (
+    Id.output_tab2 outchan depth p;
+    output_string outchan "RECUR ";
+    Id.output_id outchan x;
   )
   | Var (x, p) -> 
   (
@@ -568,6 +593,20 @@ and output_prog outchan k =
     Id.output_id outchan (fst t1);
     output_knormal outchan t2 1;
     output_knormal outchan t3 1;
+  )
+  | Loop (t1, t2, t3, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "LOOP ";
+    Id.output_id outchan (fst t1);
+    output_knormal outchan t2 1;
+    output_knormal outchan t3 1;
+  )
+  | Recur (t, p) ->
+  (
+    output_string outchan ((string_of_int p) ^ "\t");
+    output_string outchan "RECUR ";
+    Id.output_id outchan x;
   )
   | Var (x, p) -> 
   (

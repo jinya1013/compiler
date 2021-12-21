@@ -62,6 +62,12 @@ let rec g env = function (* 定数畳み込みルーチン本体 (caml2html: constfold_g) *)
       let e1' = g env e1 in
       let e2' = g (M.add x e1' env) e2 in
       Let((x, t), e1', e2', p)
+  | Loop((x, t), e1, e2, p) -> (* loopのケース (caml2html: constfold_let) *)
+      let e1' = g env e1 in
+      let e2' = g (M.add x e1' env) e2 in
+      Let((x, t), e1', e2', p)
+  | Recur(e, p) ->
+      Recur(g env e, p)
   | LetRec({ name = x; args = ys; body = e1 }, e2, p) ->
       LetRec({ name = x; args = ys; body = g env e1 }, g env e2, p)
   | LetTuple(xts, y, e, p) when memt y env ->

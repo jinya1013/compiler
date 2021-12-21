@@ -15,6 +15,8 @@ type t = (* K��������μ� (caml2html: knormal_t) *)
   | IfEq of Id.t * Id.t * t * t  * Syntax.pos (* ��� + ʬ�� (caml2html: knormal_branch) *)
   | IfLE of Id.t * Id.t * t * t  * Syntax.pos (* ��� + ʬ�� *)
   | Let of (Id.t * Type.t) * t * t  * Syntax.pos
+  | Loop of (Id.t * Type.t) * t * t  * Syntax.pos
+  | Recur of Id.t * Syntax.pos
   | Var of Id.t * Syntax.pos
   | LetRec of fundef * t * Syntax.pos
   | App of Id.t * Id.t list * Syntax.pos

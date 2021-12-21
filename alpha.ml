@@ -28,6 +28,10 @@ let rec g env = function (* α変換ルーチン本体 (caml2html: alpha_g) *)
   | Let((x, t), e1, e2, p) -> (* letのα変換 (caml2html: alpha_let) *)
       let x' = genid_or_gid x in
       Let((x', t), g env e1, g (M.add x x' env) e2, p)
+  | Loop((x, t), e1, e2, p) -> (* loopのα変換 (caml2html: alpha_let) *)
+      let x' = genid_or_gid x in
+      Loop((x', t), g env e1, g (M.add x x' env) e2, p)
+  | Recur(x, p) -> Recur(find x env, p)
   | Var(x, p) -> Var(find x env, p)
   | LetRec({ name = (x, t); args = yts; body = e1 }, e2, p) -> (* let recのα変換 (caml2html: alpha_letrec) *)
       let env = M.add x (genid_or_gid x) env in

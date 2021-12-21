@@ -16,6 +16,8 @@ type t = (* クロージャ変換後の式 (caml2html: closure_t) *)
   | IfEq of Id.t * Id.t * t * t * Syntax.pos
   | IfLE of Id.t * Id.t * t * t * Syntax.pos
   | Let of (Id.t * Type.t) * t * t * Syntax.pos
+  | Loop of (Id.t * Type.t) * t * t * Syntax.pos
+  | Recur of Id.t * Syntax.pos
   | Var of Id.t * Syntax.pos
   | MakeCls of (Id.t * Type.t) * closure * t * Syntax.pos  (*(関数名, 関数の型), クロージャ, 関数の本体 *)
   | AppCls of Id.t * Id.t list * Syntax.pos
@@ -46,6 +48,8 @@ let pos_of_t = function
   | IfEq (_, _, _,_, p) -> p
   | IfLE (_, _,_, _, p) -> p 
   | Let  (_, _,_, p) -> p
+  | Loop  (_, _,_, p) -> p
+  | Recur  (_, p) -> p
   | Var  (_, p) -> p
   | MakeCls(_, _, _, p) -> p
   | AppCls( _, _, p) -> p
@@ -86,6 +90,8 @@ let rec fv = function
   | Add(x, y, _) | Sub(x, y, _) | FAdd(x, y, _) | FSub(x, y, _) | FMul(x, y, _) | FDiv(x, y, _) | Get(x, y, _) -> S.of_list [x; y]
   | IfEq(x, y, e1, e2, _)| IfLE(x, y, e1, e2, _) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
   | Let((x, t), e1, e2, _) -> S.union (fv e1) (S.remove x (fv e2))
+  | Loop((x, t), e1, e2, _) -> S.union (fv e1) (S.remove x (fv e2))
+  | Recur(x, _) -> S.singleton x
   | Var(x, _) -> S.singleton x
   | MakeCls((x, t), { entry = l; actual_fv = ys }, e, _) -> S.remove x (S.union (S.of_list ys) (fv e))
   | AppCls(x, ys, _) -> S.of_list (x :: ys)
@@ -146,6 +152,8 @@ let rec g env known = function (* クロージャ変換ルーチン本体 (caml2html: closure
   | KNormal.IfEq(x, y, e1, e2, p) -> IfEq(x, y, g env known e1, g env known e2, p)
   | KNormal.IfLE(x, y, e1, e2, p) -> IfLE(x, y, g env known e1, g env known e2, p)
   | KNormal.Let((x, t), e1, e2, p) -> Let((x, t), g env known e1, g (M.add x t env) known e2, p)
+  | KNormal.Loop((x, t), e1, e2, p) -> Loop((x, t), g env known e1, g (M.add x t env) known e2, p)
+  | KNormal.Recur(x, p) -> Recur(x, p)
   | KNormal.Var(x, p) -> Var(x, p)
   | KNormal.LetRec({ KNormal.name = (x, t); KNormal.args = yts; KNormal.body = e1 }, e2, p) -> (* 関数定義の場合 (caml2html: closure_letrec) *)
       (* 関数定義let rec x y1 ... yn = e1 in e2の場合は、
@@ -338,6 +346,20 @@ let rec output_closure outchan e depth =
     Id.output_id outchan (fst t1);
     output_closure outchan t2 (depth + 1);
     output_closure outchan t3 (depth + 1);
+  )
+  | Loop (t1, t2, t3, p) ->
+  (
+    Id.output_tab2 outchan depth p;
+    output_string outchan "LOOP ";
+    Id.output_id outchan (fst t1);
+    output_closure outchan t2 (depth + 1);
+    output_closure outchan t3 (depth + 1);
+  )
+  | Recur (x, p) -> 
+  (
+    Id.output_tab2 outchan depth p;
+    output_string outchan "RECUR ";
+    Id.output_id outchan x;
   )
   | Var (x, p) -> 
   (

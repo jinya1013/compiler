@@ -30,6 +30,12 @@ let expand xts ini addf addi =
     (fun (offset, acc) x t ->
       (offset + 4, addi x t offset acc))
 
+(* 式 e1 の後ろに 式 e2 が入ってくるようにする
+let rec concat e1 xt e2 =
+  match e1 with
+  | Ans(exp, p) -> Let(xt, exp, e2, p)
+  | Let(yt, exp, e1', p) -> Let(yt, exp, concat e1' xt e2, p) *)
+
 let counter = ref (-4)
 let gen_offset_ft () = 
   counter := !counter + 4;
@@ -77,6 +83,12 @@ let rec g env e =  (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
       let e1' = g env e1 in
       let e2' = g (M.add x t1 env) e2 in
       concat e1' (x, t1) e2'
+  | Closure.Loop((x, t1), e1, e2, p) ->
+      let e1' = g env e1 in
+      let e2' = g (M.add x t1 env) e2 in
+      concat e1' (x, t1) e2'
+  | Closure.Recur(x, p) ->
+      
   | Closure.Var(x, p) ->
       (match M.find x env with
       | Type.Unit -> Ans(Nop, p)

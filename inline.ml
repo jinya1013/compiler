@@ -13,6 +13,7 @@ let rec g env = function (* インライン展開ルーチン本体 (caml2html: inline_g) *)
   | IfEq(x, y, e1, e2, p) -> IfEq(x, y, g env e1, g env e2, p)
   | IfLE(x, y, e1, e2, p) -> IfLE(x, y, g env e1, g env e2, p)
   | Let(xt, e1, e2, p) -> Let(xt, g env e1, g env e2, p)
+  | Loop(xt, e1, e2, p) -> Loop(xt, g env e1, g env e2, p)
   | LetRec({ name = (x, t); args = yts; body = e1 }, e2, p) -> (* 関数定義の場合 (caml2html: inline_letrec) *)
       let env = if size e1 > !threshold then env else M.add x (yts, e1) env in
       LetRec({ name = (x, t); args = yts; body = g env e1}, g env e2, p)

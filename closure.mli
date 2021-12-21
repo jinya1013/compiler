@@ -16,6 +16,8 @@ type t = (* クロージャ変換後の式 (caml2html: closure_t) *)
   | IfEq of Id.t * Id.t * t * t * Syntax.pos
   | IfLE of Id.t * Id.t * t * t * Syntax.pos
   | Let of (Id.t * Type.t) * t * t * Syntax.pos
+  | Loop of (Id.t * Type.t) * t * t * Syntax.pos
+  | Recur of Id.t * Syntax.pos
   | Var of Id.t * Syntax.pos
   | MakeCls of (Id.t * Type.t) * closure * t * Syntax.pos  (*(関数名, 関数の型), クロージャ, 関数の本体 *)
   | AppCls of Id.t * Id.t list * Syntax.pos

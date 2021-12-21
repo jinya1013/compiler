@@ -254,6 +254,7 @@ let rec g env e = (* 型推論ルーチン *)
     | Error(e, t1, t2, p) -> raise (Error(deref_term e, deref_typ t1, deref_typ t2, p))
 
 let f e =
+  Syntax.recur_check e;
   extenv := M.empty;
 (*
   (match deref_typ (g M.empty e) with
