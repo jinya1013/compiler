@@ -1,3 +1,6 @@
+let loop_recur_dict = ref M.empty
+exception WriteDictErr of string
+
 type closure = { entry : Id.l; actual_fv : Id.t list } (* トップレベル関数のラベル, 自由変数のリスト *)
 type t = (* クロージャ変換後の式 (caml2html: closure_t) *)
   | Unit of Syntax.pos
@@ -60,7 +63,36 @@ let pos_of_t = function
   | Put (_, _, _, p) -> p  
   | ExtArray(_, p) -> p
 
-
+let rec write_dict loop_xt = function
+  | Unit _ -> ()
+  | Int _ -> ()
+  | Float _ -> ()
+  | Neg _ -> ()
+  | Add _ -> ()
+  | Sub _ -> ()
+  | FNeg _ -> ()
+  | FSqrt _ -> ()
+  | Floor _ -> ()
+  | FAdd _ -> ()
+  | FSub _ -> ()
+  | FMul _ -> ()
+  | FDiv _ -> ()
+  | IfEq(x, y, e1, e2, _) -> write_dict loop_xt e1; write_dict loop_xt e2;
+  | IfLE(x, y, e1, e2, _) -> write_dict loop_xt e1; write_dict loop_xt e2;
+  | Let((x, t), e1, e2, _) -> write_dict loop_xt e1; write_dict loop_xt e2;
+  | Loop((x, t), e1, e2, _) -> write_dict loop_xt e1; write_dict (x, t) e2;
+  | Recur(x, _) -> 
+    if (fst loop_id) = "dummy" then (raise (WriteDictErr "Recur exp appears outside of the Loop exp."))
+    else (loop_recur_dict := M.add x loop_xt !loop_recur_dict);
+  | Var _ -> ()
+  | MakeCls(xt, c, e, _) -> write_dict loop_xt e; (*(関数名, 関数の型), クロージャ, 関数の本体 *)
+  | AppCls _ -> ()
+  | AppDir _ -> ()
+  | Tuple _ -> ()
+  | LetTuple(xts, e1, e2) -> write_dict loop_xt e2;
+  | Get _ -> ()
+  | Put _ -> ()
+  | ExtArray _ -> ()
 
 (*
     式sを受け取り，自由変数のMapSを返す
@@ -214,6 +246,8 @@ let f e =
 *)
   toplevel := [];
   let e' = g M.empty S.empty e in
+  List.iter (fun { name = (l, t); args = xts; formal_fv = yts; body = e } -> write_dict ("dummy", Type.Unit) e) !toplevel;
+  write_dict ("dummy", Type.Unit) e';
   Prog(List.rev !toplevel, e')
 
 let rec output_closure outchan e depth = 

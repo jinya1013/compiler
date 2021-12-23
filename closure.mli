@@ -41,3 +41,4 @@ val output_fundef : out_channel -> fundef -> int -> unit
 val output_fundef_list : out_channel -> fundef list -> int -> unit
 val output_prog : out_channel -> prog -> unit
 val pos_of_t: t -> Syntax.pos
+val loop_recur_dict : (Id.t, Type.t) M.t ref

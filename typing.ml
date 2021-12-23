@@ -6,7 +6,7 @@ exception Unify of Type.t * Type.t * Syntax.pos
 exception Error of t * Type.t * Type.t * Syntax.pos
 
 let extenv = ref M.empty
-let stack = ref (Stack.create())
+let stack = ref (Stack.create()) (* スタックだとまずいのでget_parent_loopを実装する必要 *)
 
 (* for pretty printing (and type normalization) *)
 let rec deref_typ = (* 型変数を中身でおきかえる関数 *)

@@ -30,11 +30,11 @@ let expand xts ini addf addi =
     (fun (offset, acc) x t ->
       (offset + 4, addi x t offset acc))
 
-(* 式 e1 の後ろに 式 e2 が入ってくるようにする
-let rec concat e1 xt e2 =
+(* 式 e1 の後ろに 式 e2 が入ってくるようにする *)
+let rec loop_concat e1 xt e2 =
   match e1 with
-  | Ans(exp, p) -> Let(xt, exp, e2, p)
-  | Let(yt, exp, e1', p) -> Let(yt, exp, concat e1' xt e2, p) *)
+  | Ans(exp, p) -> Loop(xt, exp, e2, Id.L(fst xt), p)
+  | Let(yt, exp, e1', p) -> Let(yt, exp, concat e1' xt e2, p)
 
 let counter = ref (-4)
 let gen_offset_ft () = 
@@ -86,8 +86,11 @@ let rec g env e =  (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
   | Closure.Loop((x, t1), e1, e2, p) ->
       let e1' = g env e1 in
       let e2' = g (M.add x t1 env) e2 in
-      concat e1' (x, t1) e2'
-  | Closure.Recur(x, p) ->
+
+  | Closure.Recur(y, p) ->
+      let (x, t) = M.find y !Closure.loop_recur_dict in
+      let l = Id.L(x) in
+      Let((x, t), Mov(y), Goto(l, p), p)
       
   | Closure.Var(x, p) ->
       (match M.find x env with
@@ -206,6 +209,7 @@ let h { Closure.name = (Id.L(x), t); Closure.args = yts; Closure.formal_fv = zts
 (* プログラム全体の仮想マシンコード生成 (caml2html: virtual_f) *)
 let f (Closure.Prog(fundefs, e)) =
   print_string "starting to virtualize the code...\n";
+  set_loop_recur_map (Closure.Prog(fundefs, e))
   data := [];
   let fundefs = List.map h fundefs in (* fundefを変換 *)
   let e = g M.empty e in (* 式の本体を変換 *)

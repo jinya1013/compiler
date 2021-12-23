@@ -1,11 +1,11 @@
 (* SPARC assembly with a few virtual instructions *)
 type id_or_imm = V of Id.t | C of int
 
-type label = string option
-
 type t = (* 命令の列 (caml2html: sparcasm_t) *)
 | Ans of exp * Syntax.pos
-| Let of (Id.t * Type.t) * exp * t * label * Syntax.pos
+| Let of (Id.t * Type.t) * exp * t * Syntax.pos
+| Loop of (Id.t * Type.t) * exp * t * Id.l * Syntax.pos
+| Goto of Id.l * Syntax.pos
 and exp = (* 一つ一つの命令に対応する式 (caml2html: sparcasm_exp) *)
   | Nop
   | Set of int (* 即値を指定のレジスタに格納する命令 *)
@@ -29,7 +29,6 @@ and exp = (* 一つ一つの命令に対応する式 (caml2html: sparcasm_exp) *)
   | StDF of Id.t * Id.t * int
   | Comment of string
   (* virtual instructions *)
-  | Goto of Id.l 
   | IfEq of Id.t * id_or_imm * t * t
   | IfLE of Id.t * id_or_imm * t * t
   | IfGE of Id.t * id_or_imm * t * t (* 左右対称ではないので必要 *)
