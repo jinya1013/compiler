@@ -495,10 +495,7 @@ let output_float_table oc data =
   inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x29 %%x0 1\n";
   inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x7 %%x0 27\n";
   inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%%x29 %%x29 %%x7\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x6 %%x0 1\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x7 %%x0 19\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%%x6 %%x6 %%x7\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\tadd\t%%x29 %%x29 %%x6\n";
+  inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x29 %%x29 -256\n";
   List.iter
     (fun (offset, d) -> 
     let bof = Int32.bits_of_float d in (* 64ビット浮動小数を32bit表現に変換 *)
