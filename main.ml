@@ -7,18 +7,19 @@ let rec iter n e = (* ????????????????????????????????? (caml2html: main_iter) *
   if e = e' then e else
   iter (n - 1) e'
 
-let lexbuf outchan inchan l = 
+let lexbuf outchan utils_s_chan p = 
   Typing.extenv := M.empty;
-  Emit.f outchan inchan
+  Emit.f outchan utils_s_chan
     (RegAlloc.f
-       (Simm.f
+      (VirtualElim.f
+        (Simm.f
           (Virtual.f
             (Closure.f
               (iter !limit
                 (Alpha.f 
                   (KNormal.f
                     (Typing.f
-                      (Parser.exp Lexer.token l)))))))))
+                      p)))))))))
 
 let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana outchank outchant utils_s_chan p = 
   Id.counter := 0;
@@ -112,25 +113,35 @@ let file f output_flag = (* ?????��?��???????��?��????��????
     close_out outchant;
     close_out outchanp;
 
-    with e -> (close_in inchan; close_out outchan; raise e)
+    with e -> (close_in inchan; close_in gchan; close_in utils_ml_chan; close_in utils_s_chan; close_out outchan; raise e)
   )
   else
   (
     try
-      lexbuf outchan utils_s_chan (Lexing.from_channel inchan);
+      let globals = GlobalVar.f stdout (Typing.f (Parser.exp Lexer.token (Lexing.from_channel gchan))) in
+      let utils = Parser.exp Lexer.token (Lexing.from_channel utils_ml_chan) in
+      let mains = Parser.exp Lexer.token (Lexing.from_channel inchan) in
+      let combined = Syntax.combine (Syntax.combine globals utils) mains in
+
+      lexbuf outchan utils_s_chan combined;
       close_in inchan;
+      close_in gchan;
+      close_in utils_ml_chan;
+      close_in utils_s_chan;
       close_out outchan;
-    with e -> (close_in inchan; close_out outchan; raise e)
+    with e -> (close_in inchan; close_in gchan; close_in utils_ml_chan; close_in utils_s_chan; close_out outchan; raise e)
   )
 
 let () = 
   let files = ref [] in
-  let output_flag = ref true in
+  let output_flag = ref false in
   Arg.parse
     [
       ("-inline", Arg.Int(fun i -> Inline.threshold := i), "maximum size of functions inlined");
       ("-iter", Arg.Int(fun i -> limit := i), "maximum number of optimizations iterated");
-      ("-output", Arg.Unit(fun () -> output_flag := true), "whether output middle expression or not")
+      ("-output", Arg.Unit(fun () -> output_flag := true), "whether output middle expression or not");
+      ("-hp", Arg.String(fun s -> Emit.hp_address := (int_of_string s); GlobalVar.gaddress := (int_of_string s)), "the initial address of the heap pointer");
+      ("-sp", Arg.String(fun s -> Emit.sp_address := (int_of_string s)), "the initial address of the stack pointer")
     ]
     (fun s -> files := !files @ [s])
     ("Mitou Min-Caml Compiler (C) Eijiro Sumii\n" ^

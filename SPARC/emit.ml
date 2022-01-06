@@ -63,6 +63,70 @@ let rec shuffle sw xys = (* sw: ¥¹¥ï¥Ã¥×ÍÑ¤Î¥ì¥¸¥¹¥¿, xys: °ú¿ô¤ÎÊÑ¿ôÌ¾¤È¥ì¥¸¥¹¥
                                          xys)
   | xys, acyc -> acyc @ shuffle sw xys
 
+let set_int oc x i p = 
+  let upper = i / 4096 in
+  let lower = i mod 4096 in 
+  (
+    match upper, p with
+    | t, p when (t > 0 && lower > 2047 && p > 0) ->
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d\n" x i p;
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s 2047\t# %d\n" x x p;
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d\n" x x (lower - 2047) p;
+    )
+    | t, p when (t > 0 && lower = 0 && p > 0) ->
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d\n" x i p;
+    )
+    | t, p when (t > 0 && lower <= 2047 && p > 0) ->
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d\n" x i p;
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d\n" x x lower p;
+    )
+    | t, p when (lower > 2047 && p > 0) ->
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 2047\t# %d\n" x p;
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d\n" x x (lower - 2047) p;
+    )
+    | t, p when (lower = 0 && p > 0) ->
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 0\t# %d\n" x p;
+    )
+    | t, p when p > 0 -> 
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d\n" x lower p;
+    )
+
+    | t, p when (t > 0 && lower > 2047) ->
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\n" x i;
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s 2047\n" x x;
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\n" x x (lower - 2047);
+    )
+    | t, p when (t > 0 && lower = 0) ->
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\n" x i;
+    )
+    | t, p when (t > 0 && lower <= 2047) ->
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\n" x i;
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\n" x x lower;
+    )
+    | t, p when (lower > 2047) ->
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 2047\n" x;
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\n" x x (lower - 2047);
+    )
+    | t, p when (lower = 0) ->
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 0\n" x;
+    )
+    | t, p -> 
+    (
+      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\n" x lower;
+    )
+  )
+
 type dest = Tail | NonTail of Id.t (* ËöÈø¤«¤É¤¦¤«¤òÉ½¤¹¥Ç¡¼¥¿·¿ (caml2html: emit_dest) *)
 let rec g oc = function (* Ì¿ÎáÎó¤Î¥¢¥»¥ó¥Ö¥êÀ¸À® (caml2html: emit_g) *)
   | dest, Ans(exp, p) -> g' p oc (dest, exp)
@@ -74,58 +138,10 @@ and g' p oc e =  (* ³ÆÌ¿Îá¤Î¥¢¥»¥ó¥Ö¥êÀ¸À® (caml2html: emit_gprime) *)
   match e with
   | NonTail(_), Nop -> ()
   | NonTail(x), Set(i) ->
-    let upper = i / 4096 in
-    let lower = i mod 4096 in 
-    (
-      match upper with
-      | t when (t > 0 && lower > 2047) ->
-      (
-        inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d \n" x i p;
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s 2047\t# %d \n" x x p;
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" x x (lower - 2047) p;
-      )
-      | t when (t > 0 && lower <= 2047) ->
-      (
-        inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d \n" x i p;
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" x x lower p;
-      )
-      | t when lower > 2047 ->
-      (
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 2047\t# %d \n" x p;
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" x x (lower - 2047) p;
-      )
-      | t -> 
-      (
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x lower p;
-      )
-    )
+    set_int oc x i p;
   | NonTail(x), SetL(Id.L(y)) ->
     let ad = List.assoc (Id.L(y)) !address_env in
-    let upper = ad / 4096 in
-    let lower = ad mod 4096 in 
-    (
-      match upper with
-      | t when (t > 0 && lower > 2047) ->
-      (
-        inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d \n" x ad p;
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s 2047\t# %d \n" x x p;
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" x x (lower - 2047) p;
-      )
-      | t when (t > 0 && lower <= 2047) ->
-      (
-        inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d \n" x ad p;
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" x x lower p;
-      )
-      | t when lower > 2047 ->
-      (
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 2047\t# %d \n" x p;
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" x x (lower - 2047) p;
-      )
-      | t -> 
-      (
-        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d \n" x lower p;
-      )
-    )
+    set_int oc x ad p;
   | NonTail(x), Mov(y) when x = y -> ()
   | NonTail(x), Mov(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" x y p
   | NonTail(x), Neg(y) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tsub\t%s %%x0 %s\t# %d \n" x y p
@@ -482,16 +498,17 @@ let h oc { name = Id.L(x); args = _; fargs = _; body = e; ret = _ } =
   stackmap := [];
   g oc (Tail, e)
 
-let allocate_st_and_hp oc =
-  inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x2 %%x0 1\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x6 %%x0 20\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%%x2 %%x2 %%x6\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x6 %%x0 21\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x3 %%x0 1\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%%x3 %%x3 %%x6\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s 2\n" reg2 zero_reg
+let sp_address = ref 0x100000
+let hp_address = ref 0x200000
+
+let allocate_st_and_hp oc = 
+  set_int oc reg_sp !sp_address 0;
+  set_int oc reg_hp !hp_address 0;
+  set_int oc reg2 2 0
 
 let output_float_table oc data = 
+  (* set_int oc reg_ftp (0x8000000 - 256) 0; *)
+
   inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x29 %%x0 1\n";
   inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x7 %%x0 27\n";
   inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%%x29 %%x29 %%x7\n";
@@ -524,6 +541,7 @@ let output_float_table oc data =
   Printf.fprintf oc "\tj\tmin_caml_start2\n"
 
 let s = ref ""
+
 let output_utils_s oc ic = 
   while (s := input_line ic; !s <> "END") do
     (match !s with
