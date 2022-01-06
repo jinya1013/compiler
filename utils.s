@@ -1,4 +1,5 @@
 min_caml_read_int:
+    addi %x6 %x0 0
     addi %x7 %x0 1
     addi %x8 %x0 20
     addi %x9 %x0 8
@@ -7,24 +8,29 @@ min_caml_read_int:
 load_int_size1:
     lbu %x8 0(%x7) # フラグを読む
     beq %x8 %x0 load_int_size1 # フラグがゼロだったら読み直し
-    lbu %x6 1(%x7) # 1だったらデータを1バイト読む
+    lbu %x8 1(%x7) # 1だったらデータを1バイト読む
+    add %x6 %x6 %x8
     sll %x6 %x6 %x9 # 左に8ビットシフト
 load_int_size2:
     lbu %x8 0(%x7) # フラグを読む
     beq %x8 %x0 load_int_size2 # フラグがゼロだったら読み直し
-    lbu %x6 1(%x7) # 1だったらデータを1バイト読む
+    lbu %x8 1(%x7) # 1だったらデータを1バイト読む
+    add %x6 %x6 %x8
     sll %x6 %x6 %x9 # 左に8ビットシフト
 load_int_size3:
     lbu %x8 0(%x7) # フラグを読む
     beq %x8 %x0 load_int_size3 # フラグがゼロだったら読み直し
-    lbu %x6 1(%x7) # 1だったらデータを1バイト読む
+    lbu %x8 1(%x7) # 1だったらデータを1バイト読む
+    add %x6 %x6 %x8
     sll %x6 %x6 %x9 # 左に8ビットシフト
 load_int_size4:
     lbu %x8 0(%x7) # フラグを読む
     beq %x8 %x0 load_int_size4 # フラグがゼロだったら読み直し
-    lbu %x6 1(%x7) # 1だったらデータを1バイト読む
+    lbu %x8 1(%x7) # 1だったらデータを1バイト読む
+    add %x6 %x6 %x8
     jr 0(%x1)
 min_caml_read_float:
+    addi %x6 %x0 0
     addi %x7 %x0 1
     addi %x8 %x0 20
     addi %x9 %x0 8
@@ -33,22 +39,26 @@ min_caml_read_float:
 load_float_size1:
     lbu %x8 0(%x7) # フラグを読む
     beq %x8 %x0 load_float_size1 # フラグがゼロだったら読み直し
-    lbu %x6 1(%x7) # 1だったらデータを1バイト読む
+    lbu %x8 1(%x7) # 1だったらデータを1バイト読む
+    add %x6 %x6 %x8
     sll %x6 %x6 %x9 # 左に8ビットシフト
 load_float_size2:
     lbu %x8 0(%x7) # フラグを読む
     beq %x8 %x0 load_float_size2 # フラグがゼロだったら読み直し
-    lbu %x6 1(%x7) # 1だったらデータを1バイト読む
+    lbu %x8 1(%x7) # 1だったらデータを1バイト読む
+    add %x6 %x6 %x8
     sll %x6 %x6 %x9 # 左に8ビットシフト
 load_float_size3:
     lbu %x8 0(%x7) # フラグを読む
     beq %x8 %x0 load_float_size3 # フラグがゼロだったら読み直し
-    lbu %x6 1(%x7) # 1だったらデータを1バイト読む
+    lbu %x8 1(%x7) # 1だったらデータを1バイト読む
+    add %x6 %x6 %x8
     sll %x6 %x6 %x9 # 左に8ビットシフト
 load_float_size4:
     lbu %x8 0(%x7) # フラグを読む
     beq %x8 %x0 load_float_size4 # フラグがゼロだったら読み直し
-    lbu %x6 1(%x7) # 1だったらデータを1バイト読む
+    lbu %x8 1(%x7) # 1だったらデータを1バイト読む
+    add %x6 %x6 %x8
     sw %x6 4(%x2)
     flw %f1 4(%x2)
     jr 0(%x1)
