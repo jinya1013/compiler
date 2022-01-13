@@ -183,19 +183,19 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   (* 退避の仮想命令の実装 (caml2html: emit_save) *)
   | NonTail(_), Save(x, y) when List.mem x allregs && not (S.mem y !stackset) -> (* 整数レジスタxに入っている変数yをスタックに退避 *)
       save y; (* コンパイラの内部情報を更新(yをスタックにのっける) *)
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
   | NonTail(_), Save(x, y) when List.mem x allfregs && not (S.mem y !stackset) -> (* yが既に保存された変数の集合に入っていなかったら *)
       savef y;
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfsw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfsw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
   | NonTail(_), Save(x, y) -> 
   assert (S.mem y !stackset); () (* 上記2つ以外はエラー *)
 
   (* 復帰の仮想命令の実装 (caml2html: emit_restore) *)
   | NonTail(x), Restore(y) when List.mem x allregs -> 
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
   | NonTail(x), Restore(y) ->
       assert (List.mem x allfregs);
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tflw\t%s %d(%s)\t# %d \n" x (offset y) reg_sp p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tflw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
   (* 末尾だったら計算結果を第一レジスタにセットしてリターン (caml2html: emit_tailret) *) (* 返り値がない命令 *)
   | Tail, (Nop | St _ | StDF _ | Comment _ | Save _ as exp) ->
       g' p oc (NonTail(Id.gentmp Type.Unit), exp);
@@ -432,14 +432,14 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   | NonTail(a), CallCls(x, ys, zs) ->
       g'_args oc [(x, reg_cl)] ys zs p;
       let ss = stacksize () in
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" reg_ra (ss - 4) reg_sp p; (* リターンアドレスの退避 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" reg_ra (-ss + 4) reg_sp p; (* リターンアドレスの退避 *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s 0(%s)\t# %d \n" reg_sw reg_cl p; (* クロージャの先頭のデータをスワップレジスタに移動する *)
     (* よくわからない *)
-      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" reg_sp reg_sp ss p; (* レジスタ溢れによって退避する分だけスタックを拡張しておく *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s -%d\t# %d \n" reg_sp reg_sp ss p; (* レジスタ溢れによって退避する分だけスタックを拡張しておく *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tjalr\t%%x1 0(%s)\t# %d \n" reg_sw p;
-      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s -%d\t# %d \n" reg_sp reg_sp ss p; (* 拡張した分を戻す *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" reg_sp reg_sp ss p; (* 拡張した分を戻す *)
 
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" reg_ra (ss - 4) reg_sp p;  (* リターンアドレスの復帰 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" reg_ra (-ss + 4) reg_sp p;  (* リターンアドレスの復帰 *)
       if List.mem a allregs && a <> regs.(0) then (* 関数の整数返り値レジスタがreg.(0)でなければ *)
         (inst_address := !inst_address + 4;Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" a regs.(0) p) (* reg.(0)からaにデータを移動 *)
       else if List.mem a allfregs && a <> fregs.(0) then (* 関数の浮動小数返り値レジスタがfreg.(0)でなければ *)
@@ -450,16 +450,16 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   | NonTail(a), CallDir(Id.L(x), ys, zs) ->
       g'_args oc [] ys zs p;
       let ss = stacksize () in
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" reg_ra (ss - 4) reg_sp p; (* リターンアドレスレジスタのデータをスタックの末尾に追加する *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" reg_ra (-ss + 4) reg_sp p; (* リターンアドレスレジスタのデータをスタックの末尾に追加する *)
     (* よくわからない *)
-      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" reg_sp reg_sp ss p; (* レジスタ溢れによって退避する分だけスタックを拡張しておく *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s -%d\t# %d \n" reg_sp reg_sp ss p; (* レジスタ溢れによって退避する分だけスタックを拡張しておく *)
 
       inst_address := !inst_address + 4;Printf.fprintf oc "\tjal\t %%x1 %s\t# %d \n" x p;
 
-      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s -%d\t# %d \n" reg_sp reg_sp ss p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s %d\t# %d \n" reg_sp reg_sp ss p;
 
 
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" reg_ra (ss - 4) reg_sp p;
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" reg_ra (-ss + 4) reg_sp p;
       if List.mem a allregs && a <> regs.(0) then
         (inst_address := !inst_address + 4;Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" a regs.(0) p)
       else if List.mem a allfregs && a <> fregs.(0) then
@@ -498,8 +498,9 @@ let h oc { name = Id.L(x); args = _; fargs = _; body = e; ret = _ } =
   stackmap := [];
   g oc (Tail, e)
 
-let sp_address = ref 0x100000
-let hp_address = ref 0x200000
+let ftp_address = ref 0x200000
+let sp_address = ref (0x200000 - 4)
+let hp_address = ref (0x200000 + 256)
 
 let allocate_st_and_hp oc = 
   set_int oc reg_sp !sp_address 0;
@@ -507,12 +508,7 @@ let allocate_st_and_hp oc =
   set_int oc reg2 2 0
 
 let output_float_table oc data = 
-  (* set_int oc reg_ftp (0x8000000 - 256) 0; *)
-
-  inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x29 %%x0 1\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x7 %%x0 27\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\tsll\t%%x29 %%x29 %%x7\n";
-  inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%%x29 %%x29 -256\n";
+  set_int oc reg_ftp !ftp_address 0;
   List.iter
     (fun (offset, d) -> 
     let bof = Int32.bits_of_float d in (* 64ビット浮動小数を32bit表現に変換 *)

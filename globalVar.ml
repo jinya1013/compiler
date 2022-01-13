@@ -16,7 +16,7 @@ let rec output_tenv oc env =
     output_tenv oc envs
   | [] -> ()
 
-let gaddress = ref 0x200000
+let gaddress = ref (0x200000 + 256)
 let genv = ref M.empty (* グローバル変数名とそのアドレスの対応 *)
 let gtenv = ref M.empty
 let aenv = ref M.empty (* 配列名とその要素のサイズの対応 *)

@@ -140,8 +140,8 @@ let () =
       ("-inline", Arg.Int(fun i -> Inline.threshold := i), "maximum size of functions inlined");
       ("-iter", Arg.Int(fun i -> limit := i), "maximum number of optimizations iterated");
       ("-output", Arg.Unit(fun () -> output_flag := true), "whether output middle expression or not");
-      ("-hp", Arg.String(fun s -> Emit.hp_address := (int_of_string s); GlobalVar.gaddress := (int_of_string s)), "the initial address of the heap pointer");
-      ("-sp", Arg.String(fun s -> Emit.sp_address := (int_of_string s)), "the initial address of the stack pointer")
+      ("-hp", Arg.String(fun s -> Emit.ftp_address := (int_of_string s); Emit.hp_address := !Emit.ftp_address + 256; GlobalVar.gaddress := !Emit.ftp_address + 256 ), "the initial address of the heap pointer");
+      ("-sp", Arg.String(fun s -> Emit.sp_address := (int_of_string s) - 4), "the initial address of the stack pointer")
     ]
     (fun s -> files := !files @ [s])
     ("Mitou Min-Caml Compiler (C) Eijiro Sumii\n" ^

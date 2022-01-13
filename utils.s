@@ -59,8 +59,8 @@ load_float_size4:
     beq %x8 %x0 load_float_size4 # フラグがゼロだったら読み直し
     lbu %x8 1(%x7) # 1だったらデータを1バイト読む
     add %x6 %x6 %x8
-    sw %x6 4(%x2)
-    flw %f1 4(%x2)
+    sw %x6 -4(%x2)
+    flw %f1 -4(%x2)
     jr 0(%x1)
 min_caml_print_char:
     addi %x7 %x0 1 # x7 <- 1
