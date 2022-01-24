@@ -134,7 +134,7 @@ let file f output_flag = (* ?????��?��???????��?��????��????
 
 let () = 
   let files = ref [] in
-  let output_flag = ref false in
+  let output_flag = ref true in
   Arg.parse
     [
       ("-inline", Arg.Int(fun i -> Inline.threshold := i), "maximum size of functions inlined");

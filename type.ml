@@ -10,6 +10,15 @@ type t = (* MinCamlの型を表現するデータ型 (caml2html: type_t) *)
 
 let gentyp () = Var(ref None) (* 新しい型変数を作る *)
 
+let rec str_of_type = function
+| Unit -> "Unit"
+| Bool -> "Bool"
+| Int -> "Int"
+| Float -> "Float"
+| Fun(ts, t) -> "Fun("^(List.fold_left (fun a b -> a^", "^b) (List.hd(ts)) (List.tl(ts)))^", "^(str_of_type t)^")"
+| Tuple(ts) -> "Tuple("^(List.fold_left (fun a b -> a^", "^b) (List.hd(ts)) (List.tl(ts)))^")"
+
+
 let rec output_type outchan s = 
   match s with
   | Unit -> output_string outchan "Unit"

@@ -93,7 +93,6 @@ let rec g env e =  (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
           (fun y _ offset store_fv -> seq(St(y, x, offset), store_fv, p)) in
 
 (* let seq(e1, e2, p) = Let((Id.gentmp Type.Unit, Type.Unit), e1, e2, p) *)
-  
       Let((x, t), Mov(reg_hp), (* ヒープポインタをxにいれる *)
           Let((reg_hp, Type.Int), Add(reg_hp, C(offset)), (* ヒープポインタを外部変数の数だけ加算する *)
               (let z = Id.genid "l" in
