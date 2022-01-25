@@ -15,8 +15,11 @@ let rec str_of_type = function
 | Bool -> "Bool"
 | Int -> "Int"
 | Float -> "Float"
-| Fun(ts, t) -> "Fun("^(List.fold_left (fun a b -> a^", "^b) (List.hd(ts)) (List.tl(ts)))^", "^(str_of_type t)^")"
-| Tuple(ts) -> "Tuple("^(List.fold_left (fun a b -> a^", "^b) (List.hd(ts)) (List.tl(ts)))^")"
+| Fun(ts, t) -> "Fun(["^(List.fold_left (fun a b -> a^", "^(str_of_type b)) (str_of_type (List.hd(ts))) (List.tl(ts)))^"], "^(str_of_type t)^")"
+| Tuple(ts) -> "Tuple("^(List.fold_left (fun a b -> a^", "^(str_of_type b)) (str_of_type (List.hd(ts))) (List.tl(ts)))^")"
+| Array(t) -> "Array("^(str_of_type t)^")"
+| Var(tref) when (Option.is_some !tref) -> "Var("^(str_of_type (Option.get !tref))^")"
+| Var(_) -> "Var(alpha)"
 
 
 let rec output_type outchan s = 

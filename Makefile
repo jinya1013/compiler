@@ -25,13 +25,13 @@ globalVar.mli globalVar.ml \
 kNormal.mli kNormal.ml \
 alpha.mli alpha.ml beta.mli beta.ml assoc.mli assoc.ml \
 inline.mli inline.ml constFold.mli constFold.ml elim.mli elim.ml \
-closure.mli closure.ml asm.mli asm.ml virtual.mli virtual.ml \
+closure.mli closure.ml type_check.mli type_check.ml asm.mli asm.ml virtual.mli virtual.ml \
 virtualElim.mli virtualElim.ml \
 simm.mli simm.ml regAlloc.mli regAlloc.ml emit.mli emit.ml \
 main.mli main.ml 
 
 # ���ƥ��ȥץ������?�������顢���������?
-TESTS = print fib sum-tail gcd sum fib ack even-odd \
+TESTS = min-rt_cpuexp print fib sum-tail gcd sum fib ack even-odd \
 adder funcomp cls-rec cls-bug cls-bug2 cls-reg-bug \
 shuffle spill spill2 spill3 join-stack join-stack2 join-stack3 \
 join-reg join-reg2 non-tail-if non-tail-if2 \
@@ -61,7 +61,7 @@ min-caml.html: main.mli main.ml id.ml m.ml s.ml \
 		kNormal.mli kNormal.ml \
 		alpha.mli alpha.ml beta.mli beta.ml assoc.mli assoc.ml \
 		inline.mli inline.ml constFold.mli constFold.ml elim.mli elim.ml \
-		closure.mli closure.ml asm.mli asm.ml virtual.mli virtual.ml \
+		closure.mli closure.ml type_check.mli type_check.ml asm.mli asm.ml virtual.mli virtual.ml \
 		virtualElim.mli virtualElim.ml \
 		simm.mli simm.ml regAlloc.mli regAlloc.ml emit.mli emit.ml
 	./to_sparc

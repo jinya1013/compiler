@@ -1,5 +1,6 @@
 open Asm
 
+let is_minrt_cpuexp = ref false
 let inst_address = ref 4
 let address_env = ref []
 
@@ -551,7 +552,7 @@ let f oc ic (Prog(data, fundefs, e)) =
   Printf.fprintf oc ".global min_caml_start\n";
   Printf.fprintf oc "min_caml_start:\t\n";
   output_float_table oc data;
-  output_utils_s oc ic;
+  (if !is_minrt_cpuexp then (output_utils_s oc ic) else ());
   List.iter (fun fundef -> h oc fundef) fundefs;
   Printf.fprintf oc "min_caml_start2:\n";
   allocate_st_and_hp oc;
