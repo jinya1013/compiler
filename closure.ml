@@ -443,6 +443,8 @@ and output_fundef outchan { name = funname; args = funargs; formal_fv = funfv; b
     Id.output_tab2 outchan (depth + 1) p;
     output_string outchan "name : ";
     Id.output_label outchan (fst(funname));
+    output_string outchan " ";
+    Type.output_type outchan (snd(funname));
     Id.output_tab2 outchan (depth + 1) p;
     output_string outchan "args : ";
     Id.output_id_list outchan (fst (List.split funargs));

@@ -49,11 +49,15 @@ let rec output_type outchan s =
     output_type outchan t;
     output_string outchan " )"
   )
-  | Var(tref) ->
+  | Var(tref) when Option.is_some !tref ->
   (
     output_string outchan "Var( ";
     output_type outchan (Option.get !tref);
     output_string outchan " )";
+  )
+  | Var(_) ->
+  (
+    output_string outchan "Var(alpha)";
   )
   and output_type_list outchan ts = 
     let f t = 

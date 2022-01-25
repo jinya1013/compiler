@@ -218,9 +218,27 @@ let rec g env = function (* KÀµµ¬²½¥ë¡¼¥Á¥óËÜÂÎ (caml2html: knormal_g) *)
               (fun y -> insert_let p (g env e1)
                   (fun x -> Put(x, y, z, p), Type.Unit)))
       )
+
+let rec bool_to_int_type t = 
+  match t with
+  | Type.Bool -> Type.Int
+  | Type.Fun(args, r) -> Type.Fun(List.map bool_to_int_type args, bool_to_int_type r)
+  | Type.Tuple(ts) -> Type.Tuple(List.map bool_to_int_type ts)
+  | Type.Array(t) -> Type.Array(bool_to_int_type t)
+  | Type.Var(tref) when Option.is_some !tref -> 
+    let t' = Option.get !tref in Type.Var(ref (Some(bool_to_int_type t')))
+  | x -> x
+let rec bool_to_int_exp = function
+  | Let((x, t), e1, e2, p) -> Let((x, bool_to_int_type t), bool_to_int_exp e1,  bool_to_int_exp e2, p)
+  | IfEq(x, y, e1, e2, p) -> IfEq(x, y, bool_to_int_exp e1, bool_to_int_exp e2, p) (* Èæ³Ó + Ê¬´ô (caml2html: knormal_branch) *)
+  | IfLE(x, y, e1, e2, p) -> IfLE(x, y, bool_to_int_exp e1, bool_to_int_exp e2, p) (* Èæ³Ó + Ê¬´ô *)
+  | LetRec({ name = (x, t); args = yts; body = e1}, e2, p) -> 
+    LetRec({ name = (x, bool_to_int_type t); args = List.map (fun (x, t) -> (x, bool_to_int_type t)) yts; body = bool_to_int_exp e1}, bool_to_int_exp e2, p)
+  | LetTuple(xts, e1, e2, p) -> LetTuple(List.map (fun (x, t) -> (x, bool_to_int_type t)) xts, e1, bool_to_int_exp e2, p)
+  | x -> x
       
 
-let f e = fst (g M.empty e)
+let f e = bool_to_int_exp (fst (g M.empty e))
 
 
 let rec output_knormal outchan k depth = 
@@ -351,6 +369,8 @@ let rec output_knormal outchan k depth =
     Id.output_tab2 outchan depth p;
     output_string outchan "LET ";
     Id.output_id outchan (fst t1);
+    output_string outchan " : ";
+    Type.output_type outchan (snd t1);
     output_knormal outchan t2 (depth + 1);
     output_knormal outchan t3 (depth + 1);
   )
@@ -566,6 +586,8 @@ and output_prog outchan k =
     output_string outchan ((string_of_int p) ^ "\t");
     output_string outchan "LET ";
     Id.output_id outchan (fst t1);
+    output_string outchan " : ";
+    Type.output_type outchan (snd t1);
     output_knormal outchan t2 1;
     output_knormal outchan t3 1;
   )

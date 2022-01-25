@@ -192,6 +192,8 @@ let rec output_syntax outchan s depth =
     Id.output_tab2 outchan depth p;
     output_string outchan "LET ";
     Id.output_id outchan (fst t1);
+    output_string outchan " : ";
+    Type.output_type outchan (snd t1);
     output_syntax outchan t2 (depth + 1);
     output_syntax outchan t3 (depth + 1);
   )
@@ -416,6 +418,8 @@ and output_prog outchan s =
     output_string outchan ((string_of_int p) ^ "\t");
     output_string outchan "LET ";
     Id.output_id outchan (fst t1);
+    output_string outchan " : ";
+    Type.output_type outchan (snd t1);
     output_syntax outchan t2 1;
     output_syntax outchan t3 1;
   )

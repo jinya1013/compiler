@@ -72,7 +72,7 @@ let file f output_flag = (* ?????��?��???????��?��????��????
         retval : unit
           ??????
 *)
-  if f = "min-rt_cpuexp.ml" then
+  if f = "test/min-rt_cpuexp" then
   (
   Emit.is_minrt_cpuexp := true;
   let inchan = open_in (f ^ ".ml") in
@@ -93,7 +93,7 @@ let file f output_flag = (* ?????��?��???????��?��????��????
     let outchant = open_out (f ^ ".opt") in
     let outchanp = open_out (f ^ ".opp") in
 
-    let globals = GlobalVar.f stdout (Typing.f (Parser.exp Lexer.token (Lexing.from_channel gchan))) in
+    let globals = Parser.exp Lexer.token (Lexing.from_channel gchan) in
     let utils = Parser.exp Lexer.token (Lexing.from_channel utils_ml_chan) in
     let mains = Parser.exp Lexer.token (Lexing.from_channel inchan) in
     let combined = Syntax.combine (Syntax.combine globals utils) mains in
@@ -123,7 +123,7 @@ let file f output_flag = (* ?????��?��???????��?��????��????
   else
   (
     try
-      let globals = GlobalVar.f stdout (Typing.f (Parser.exp Lexer.token (Lexing.from_channel gchan))) in
+      let globals = Parser.exp Lexer.token (Lexing.from_channel gchan) in
       let utils = Parser.exp Lexer.token (Lexing.from_channel utils_ml_chan) in
       let mains = Parser.exp Lexer.token (Lexing.from_channel inchan) in
       let combined = Syntax.combine (Syntax.combine globals utils) mains in
