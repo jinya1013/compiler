@@ -1,7 +1,11 @@
 open KNormal
 
 (* インライン展開する関数の最大サイズ (caml2html: inline_threshold) *)
-let threshold = ref 30 (* Mainで-inlineオプションによりセットされる *) (* 10 で 10000命令切る *)
+<<<<<<< HEAD
+let threshold = ref 62 (* Mainで-inlineオプションによりセットされる *) (* 10 で 10000命令切る *)
+=======
+let threshold = ref 62 (* Mainで-inlineオプションによりセットされる *) (* 10 で 10000命令切る *)
+>>>>>>> 736ca4c ([紊????] lui???紊???眼??, 2nd???ISA???絲上??)
 
 let rec size = function
   | IfEq(_, _, e1, e2, p) | IfLE(_, _, e1, e2, p)

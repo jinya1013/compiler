@@ -139,25 +139,12 @@ let rec g env e =  (* 式の仮想マシンコード生成 (caml2html: virtual_g) *)
             Let((tmp, Type.Int), SLL(y, reg2),
               Let((offset, Type.Int), Add(x, V(tmp)), (* offset = y * 4 とする *)
                 Ans(LdDF(offset, 0), p), p), p)
-      (* | Type.Array(_) ->
-          Let((offset, Type.Int), Add(x, V(y)),
-              Ans(Ld(x, C(0)), p), p) *)
       | Type.Array(_) ->
             Let((tmp, Type.Int), SLL(y, reg2),
               Let((offset, Type.Int), Add(x, V(tmp)), (* offset = y * 4 とする *)
                 Ans(Ld(offset, 0), p), p), p)
       | _ -> assert false)
   | Closure.Put(x, y, z, p) -> (* 配列xのy番目をzに変更する *)
-      (* let offset = Id.genid "o" in
-      (match M.find x env with
-      | Type.Array(Type.Unit) -> Ans(Nop, p)
-      | Type.Array(Type.Float) ->
-          Let((offset, Type.Int), SLL(y, C(2)),
-              Ans(StDF(z, x, V(offset)), p), p)
-      | Type.Array(_) ->
-          Let((offset, Type.Int), SLL(y, C(2)),
-              Ans(St(z, x, V(offset)), p), p)
-      | _ -> assert false) *)
       let offset = Id.genid "o" in
       let tmp = Id.genid "tmp" in
       (match M.find x env with

@@ -14,21 +14,7 @@ let savef x =
   if not (List.mem (x, Type.Float) !stackmap) then
     stackmap := !stackmap @ [(x, Type.Float)]
 let locate x = (* stackmap(stack¤Ësave¤µ¤ì¤Æ¤¤¤ëÊÑ¿ô¤Î¥ê¥¹¥È)¤òºÆµ¢Åª¤Ë¸«¤Æ, ¥¹¥¿¥Ã¥¯Ãæ¤Ç¤ÎÊÑ¿ô¤Î°ÌÃÖ¤òÊÖ¤¹´Ø¿ô *)
-(*
-  stackmap := [y; z; x; w; x];
-  locate x = loc [y; z; x; w; x]
-           = List.map succ (loc [z; x; w; x])
-           = List.map succ (List.map succ (loc [x; w; x]))
-           = List.map succ (List.map succ (0 :: (List.map succ [w; x])))
-           = List.map succ (List.map succ (0 :: (List.map succ (List.map succ [x]))))
-           = List.map succ (List.map succ (0 :: (List.map succ (0 :: (List.map succ [])))))
-           = List.map succ (List.map succ (0 :: (List.map succ (0 :: []))))
-           = List.map succ (List.map succ (0 :: (List.map succ [0])))
-           = List.map succ (List.map succ (0 :: [1]))
-           = List.map succ (List.map succ [0;1])
-           = List.map succ [1;2]
-           = [2;3]
-*)
+
   let rec loc = function
     | [] -> []
     | y :: zs when x = (fst y) && (snd y) = Type.Int -> 
@@ -64,29 +50,18 @@ let rec shuffle sw xys = (* sw: ¥¹¥ï¥Ã¥×ÍÑ¤Î¥ì¥¸¥¹¥¿, xys: °ú¿ô¤ÎÊÑ¿ôÌ¾¤È¥ì¥¸¥¹¥
   | xys, acyc -> acyc @ shuffle sw xys
 
 let set_int oc x i p = 
-  let upper = i / 4096 in
-  let lower = i mod 4096 in 
+  let upper = i / 2048 in
+  let lower = i mod 2048 in 
   (
     match upper, p with
-    | t, p when (t > 0 && lower > 2047 && p > 0) ->
-    (
-      inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d\n" x i p;
-      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s 2047\t# %d\n" x x p;
-      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d\n" x x (lower - 2047) p;
-    )
     | t, p when (t > 0 && lower = 0 && p > 0) ->
     (
       inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d\n" x i p;
     )
-    | t, p when (t > 0 && lower <= 2047 && p > 0) ->
+    | t, p when (t > 0 && p > 0) ->
     (
       inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\t# %d\n" x i p;
       inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d\n" x x lower p;
-    )
-    | t, p when (lower > 2047 && p > 0) ->
-    (
-      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 2047\t# %d\n" x p;
-      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\t# %d\n" x x (lower - 2047) p;
     )
     | t, p when (lower = 0 && p > 0) ->
     (
@@ -96,26 +71,14 @@ let set_int oc x i p =
     (
       inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 %d\t# %d\n" x lower p;
     )
-
-    | t, p when (t > 0 && lower > 2047) ->
-    (
-      inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\n" x i;
-      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s 2047\n" x x;
-      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\n" x x (lower - 2047);
-    )
     | t, p when (t > 0 && lower = 0) ->
     (
       inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\n" x i;
     )
-    | t, p when (t > 0 && lower <= 2047) ->
+    | t, p when (t > 0) ->
     (
       inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%s %d\n" x i;
       inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\n" x x lower;
-    )
-    | t, p when (lower > 2047) ->
-    (
-      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x0 2047\n" x;
-      inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %s %d\n" x x (lower - 2047);
     )
     | t, p when (lower = 0) ->
     (
@@ -163,8 +126,8 @@ and g' p oc e =  (* ³ÆÌ¿Îá¤Î¥¢¥»¥ó¥Ö¥êÀ¸À® (caml2html: emit_gprime) *)
 
   | NonTail(x), FMovD(y) when x = y -> ()
   | NonTail(x), FMovD(y) ->
-      inst_address := !inst_address + 4;Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_fsw p;  (* ÉâÆ°¾®¿ô¤Î0¤òÍÑ°Õ *)
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" x y reg_fsw p; (* f0¤Èy¤ÎÏÂ¤òx¤ËÆþ¤ì¤ë *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_sw p;  (* ÉâÆ°¾®¿ô¤Î0¤òÍÑ°Õ *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" x y reg_sw p; (* f0¤Èy¤ÎÏÂ¤òx¤ËÆþ¤ì¤ë *)
   | NonTail(x), FNegD(y) ->
       inst_address := !inst_address + 4;Printf.fprintf oc "\tfneg\t%s %s\t# %d \n" x y p;
   | NonTail(x), FSqrtD(y) ->
@@ -175,8 +138,8 @@ and g' p oc e =  (* ³ÆÌ¿Îá¤Î¥¢¥»¥ó¥Ö¥êÀ¸À® (caml2html: emit_gprime) *)
   | NonTail(x), FSubD(y, z) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tfsub\t%s %s %s\t# %d \n" x y z p
   | NonTail(x), FMulD(y, z) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tfmul\t%s %s %s\t# %d \n" x y z p
   | NonTail(x), FDivD(y, z) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tfdiv\t%s %s %s\t# %d \n" x y z p
-  | NonTail(x), LdDF(y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tflw\t%s %d(%s)\t# %d \n" x z' y p
-  | NonTail(_), StDF(x, y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tfsw\t%s %d(%s)\t# %d \n" x z' y p
+  | NonTail(x), LdDF(y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" x z' y p
+  | NonTail(_), StDF(x, y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" x z' y p
 
   | NonTail(_), Comment(s) -> inst_address := !inst_address + 4;Printf.fprintf oc "\t# %s\t# %d \n" s p
 
@@ -186,7 +149,7 @@ and g' p oc e =  (* ³ÆÌ¿Îá¤Î¥¢¥»¥ó¥Ö¥êÀ¸À® (caml2html: emit_gprime) *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
   | NonTail(_), Save(x, y) when List.mem x allfregs && not (S.mem y !stackset) -> (* y¤¬´û¤ËÊÝÂ¸¤µ¤ì¤¿ÊÑ¿ô¤Î½¸¹ç¤ËÆþ¤Ã¤Æ¤¤¤Ê¤«¤Ã¤¿¤é *)
       savef y;
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfsw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
   | NonTail(_), Save(x, y) -> 
   assert (S.mem y !stackset); () (* ¾åµ­2¤Ä°Ê³°¤Ï¥¨¥é¡¼ *)
 
@@ -195,7 +158,7 @@ and g' p oc e =  (* ³ÆÌ¿Îá¤Î¥¢¥»¥ó¥Ö¥êÀ¸À® (caml2html: emit_gprime) *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
   | NonTail(x), Restore(y) ->
       assert (List.mem x allfregs);
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tflw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
   (* ËöÈø¤À¤Ã¤¿¤é·×»»·ë²Ì¤òÂè°ì¥ì¥¸¥¹¥¿¤Ë¥»¥Ã¥È¤·¤Æ¥ê¥¿¡¼¥ó (caml2html: emit_tailret) *) (* ÊÖ¤êÃÍ¤¬¤Ê¤¤Ì¿Îá *)
   | Tail, (Nop | St _ | StDF _ | Comment _ | Save _ as exp) ->
       g' p oc (NonTail(Id.gentmp Type.Unit), exp);
@@ -444,8 +407,8 @@ and g' p oc e =  (* ³ÆÌ¿Îá¤Î¥¢¥»¥ó¥Ö¥êÀ¸À® (caml2html: emit_gprime) *)
         (inst_address := !inst_address + 4;Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" a regs.(0) p) (* reg.(0)¤«¤éa¤Ë¥Ç¡¼¥¿¤ò°ÜÆ° *)
       else if List.mem a allfregs && a <> fregs.(0) then (* ´Ø¿ô¤ÎÉâÆ°¾®¿ôÊÖ¤êÃÍ¥ì¥¸¥¹¥¿¤¬freg.(0)¤Ç¤Ê¤±¤ì¤Ð *)
         (
-          inst_address := !inst_address + 4;Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_fsw p;  (* ÉâÆ°¾®¿ô¤Î0¤òÍÑ°Õ *)
-          inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" a fregs.(0) reg_fsw p;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_sw p;  (* ÉâÆ°¾®¿ô¤Î0¤òÍÑ°Õ *)
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" a fregs.(0) reg_sw p;
         );
   | NonTail(a), CallDir(Id.L(x), ys, zs) ->
       g'_args oc [] ys zs p;
@@ -464,8 +427,8 @@ and g' p oc e =  (* ³ÆÌ¿Îá¤Î¥¢¥»¥ó¥Ö¥êÀ¸À® (caml2html: emit_gprime) *)
         (inst_address := !inst_address + 4;Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" a regs.(0) p)
       else if List.mem a allfregs && a <> fregs.(0) then
         (
-          inst_address := !inst_address + 4;Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_fsw p;  (* ÉâÆ°¾®¿ô¤Î0¤òÍÑ°Õ *)
-          inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" a fregs.(0) reg_fsw p;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_sw p;  (* ÉâÆ°¾®¿ô¤Î0¤òÍÑ°Õ *)
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" a fregs.(0) reg_sw p;
         );
 and g'_args oc x_reg_cl ys zs p = (* x_reg_cl *)
   let (i, yrs) =
@@ -489,7 +452,7 @@ and g'_args oc x_reg_cl ys zs p = (* x_reg_cl *)
     (fun (z, fr) ->
       inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %%f0 %s\t# %d \n" fr z p;
     )
-    (shuffle reg_fsw zfrs)
+    (shuffle reg_sw zfrs)
 
 let h oc { name = Id.L(x); args = _; fargs = _; body = e; ret = _ } =
   address_env := (Id.L(x), !inst_address) :: !address_env;
@@ -512,21 +475,16 @@ let output_float_table oc data =
   List.iter
     (fun (offset, d) -> 
     let bof = Int32.bits_of_float d in (* 64¥Ó¥Ã¥ÈÉâÆ°¾®¿ô¤ò32bitÉ½¸½¤ËÊÑ´¹ *)
-    let l11_0 = Int32.logand (Int32.of_string "0xfff") bof in (* ²¼°Ì12¥Ó¥Ã¥È *)
+    let l10_0 = Int32.logand (Int32.of_string "0x7ff") bof in (* ²¼°Ì10¥Ó¥Ã¥È *)
 
-    inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%%x6 %ld\n" bof; (*¾å°Ì20¥Ó¥Ã¥È¤ò%x6¤ËÆþ¤ì¤ë *)
+    inst_address := !inst_address + 4; Printf.fprintf oc "\tlui\t%%x6 %ld\n" bof; (*¾å°Ì21¥Ó¥Ã¥È¤ò%x6¤ËÆþ¤ì¤ë *)
 
     (
-      match l11_0 with
-      | x when x > Int32.of_string "0x7ff" -> 
-        (
-          inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%%x6 %%x6 2047\n";
-          inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" (Int32.sub l11_0 (Int32.of_string "0x7ff"));
-        )
+      match l10_0 with
       | x when x = Int32.of_string "0" -> ()
       | _ ->
         (
-          inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" l11_0;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%%x6 %%x6 %ld\n" l10_0;
         )
     ); (* ²¼°Ì12¥Ó¥Ã¥È¤ò%x6¤ËÆþ¤ì¤ë *)
 
