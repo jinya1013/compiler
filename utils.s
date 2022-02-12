@@ -60,7 +60,7 @@ load_float_size4:
     lbu %x8 1(%x7) # 1だったらデータを1バイト読む
     add %x6 %x6 %x8
     sw %x6 -4(%x2)
-    flw %f1 -4(%x2)
+    lw %f1 -4(%x2)
     jr 0(%x1)
 min_caml_print_char:
     addi %x7 %x0 1 # x7 <- 1
@@ -99,7 +99,7 @@ min_caml_create_float_array:
     add %x6 %x0 %x8 # %x6がゼロなら先頭アドレスを%x6に入れる
     jr 0(%x1)
 create_float_array_loop:
-    fsw %f1 0(%x3) # %x7を書き込む
+    sw %f1 0(%x3) # %x7を書き込む
     addi %x3 %x3 4 # reg_hpを進める
     addi %x6 %x6 -1 # %x6をデクリメント
     bne %x6 %x0 create_float_array_loop # %x6がゼロでないなら戻る

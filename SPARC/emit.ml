@@ -175,8 +175,8 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   | NonTail(x), FSubD(y, z) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tfsub\t%s %s %s\t# %d \n" x y z p
   | NonTail(x), FMulD(y, z) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tfmul\t%s %s %s\t# %d \n" x y z p
   | NonTail(x), FDivD(y, z) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tfdiv\t%s %s %s\t# %d \n" x y z p
-  | NonTail(x), LdDF(y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tflw\t%s %d(%s)\t# %d \n" x z' y p
-  | NonTail(_), StDF(x, y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tfsw\t%s %d(%s)\t# %d \n" x z' y p
+  | NonTail(x), LdDF(y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" x z' y p
+  | NonTail(_), StDF(x, y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" x z' y p
 
   | NonTail(_), Comment(s) -> inst_address := !inst_address + 4;Printf.fprintf oc "\t# %s\t# %d \n" s p
 
@@ -186,7 +186,7 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
   | NonTail(_), Save(x, y) when List.mem x allfregs && not (S.mem y !stackset) -> (* yが既に保存された変数の集合に入っていなかったら *)
       savef y;
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfsw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
   | NonTail(_), Save(x, y) -> 
   assert (S.mem y !stackset); () (* 上記2つ以外はエラー *)
 
@@ -195,7 +195,7 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
   | NonTail(x), Restore(y) ->
       assert (List.mem x allfregs);
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tflw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s -%d(%s)\t# %d \n" x (offset y) reg_sp p
   (* 末尾だったら計算結果を第一レジスタにセットしてリターン (caml2html: emit_tailret) *) (* 返り値がない命令 *)
   | Tail, (Nop | St _ | StDF _ | Comment _ | Save _ as exp) ->
       g' p oc (NonTail(Id.gentmp Type.Unit), exp);

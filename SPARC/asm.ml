@@ -32,11 +32,11 @@ and exp = (* 一つ一つの命令に対応する式 (caml2html: sparcasm_exp) *)
   | IfFEq of Id.t * Id.t * t * t
   | IfFLE of Id.t * Id.t * t * t
   (* closure address, integer arguments, and float arguments *)
-  | CallCls of Id.t * Id.t list * Id.t list
-  | CallDir of Id.l * Id.t list * Id.t list
+  | CallCls of Id.t * Id.t list
+  | CallDir of Id.l * Id.t list
   | Save of Id.t * Id.t (* レジスタ変数の値をスタック変数へ保存 (caml2html: sparcasm_save) *)
   | Restore of Id.t (* スタック変数から値を復元 (caml2html: sparcasm_restore) *)
-type fundef = { name : Id.l; args : Id.t list; fargs : Id.t list; body : t; ret : Type.t }
+type fundef = { name : Id.l; args : Id.t list; body : t; ret : Type.t }
 (* プログラム全体 = 浮動小数点数テーブル + トップレベル関数 + メインの式 (caml2html: sparcasm_prog) *)
 type prog = Prog of (int * float) list * fundef list * t
 
@@ -52,10 +52,7 @@ let regs = (* Array.init 16 (fun i -> Printf.sprintf "%%r%d" i) *)
      "%x6"; "%x7"; "%x8"; "%x9"; "%x10"; "%x11"; "%x12"; "%x13";
      "%x14"; "%x15"; "%x16"; "%x17"; "%x18"; "%x19"; "%x20";
      "%x21"; "%x22"; "%x23"; "%x24"; "%x25"; "%x26"; "%x27";
-     "%x30"; "%x31"; "%x4"
-  |]
-(* 関数呼び出し時は, クロージャのアドレスをx6に, 引数をx7, x8, に, 戻り番地をx1に入れる *)
-let fregs = [| 
+     "%x30"; "%x31"; "%x4";
      "%f1"; "%f2"; "%f3"; "%f4"; "%f5"; "%f6"; "%f7"; 
      "%f8"; "%f9"; "%f10"; "%f11"; "%f12"; "%f13";
      "%f14"; "%f15"; "%f16"; "%f17"; "%f18"; "%f19"; "%f20";
@@ -63,7 +60,6 @@ let fregs = [|
      "%f28"; "%f29"; "%f31"
   |]
 let allregs = Array.to_list regs 
-let allfregs = Array.to_list fregs
 let reg_cl = "%x4" (* closure register *)
 let zero_reg = "%x0" (* constant_register for integer 0 *)
 let reg2 = "%x28" (* constant_register for integer 2 *)
@@ -94,8 +90,8 @@ let rec fv_exp = function
   | FAddD(x, y) | FSubD(x, y) | FMulD(x, y) | FDivD(x, y) -> [x; y]
   | IfEq(x, y', e1, e2) | IfLE(x, y', e1, e2) | IfGE(x, y', e1, e2) -> x :: fv_id_or_imm y' @ remove_and_uniq S.empty (fv e1 @ fv e2) (* uniq here just for efficiency *)
   | IfFEq(x, y, e1, e2) | IfFLE(x, y, e1, e2) -> x :: y :: remove_and_uniq S.empty (fv e1 @ fv e2) (* uniq here just for efficiency *)
-  | CallCls(x, ys, zs) -> x :: ys @ zs
-  | CallDir(_, ys, zs) -> ys @ zs
+  | CallCls(x, ys) -> x :: ys
+  | CallDir(_, ys) -> ys
 and fv = function
   | Ans(exp, _) -> fv_exp exp
   | Let((x, t), exp, e, _) ->
@@ -339,26 +335,21 @@ and output_exp outchan depth p = function
     output_t outchan (depth + 1) e2;
   )
   (* closure address, integer arguments, and float arguments *)
-  | CallCls (x, intargs, floatargs) ->
+  | CallCls (x, args) ->
   (
     Id.output_tab2 outchan depth p;
     output_string outchan "CALLCLS ";
     output_string outchan "ADDRESS: ";
     Id.output_id outchan x;
-    output_string outchan ", INT_ARGS: ";
-    Id.output_id_list outchan intargs;
-    output_string outchan ", FLOAT_ARGS: ";
-    Id.output_id_list outchan floatargs;
+    Id.output_id_list outchan args;
   )
-  | CallDir (x, intargs, floatargs) ->
+  | CallDir (x, args) ->
   (
     Id.output_tab2 outchan depth p;
     output_string outchan "CALLDIR ";
     Id.output_label outchan x;
     output_string outchan " ";
-    Id.output_id_list outchan intargs;
-    output_string outchan " ";
-    Id.output_id_list outchan floatargs;
+    Id.output_id_list outchan args;
   )
   | Save (x, m) -> (* レジスタ変数の値をスタック変数へ保存 (caml2html: sparcasm_save) *)
   (
@@ -374,17 +365,14 @@ and output_exp outchan depth p = function
     output_string outchan "RESTORE ";
     Id.output_id outchan m;
   )
-and output_func outchan depth { name = funname; args = intargs; fargs = floatargs; body = funbody; ret = returntype } = 
+and output_func outchan depth { name = funname; args = args; body = funbody; ret = returntype } = 
 let p = pos_of_t funbody in
   Id.output_tab2 outchan depth p;
   output_string outchan "NAME : ";
   Id.output_label outchan funname;
   Id.output_tab2 outchan depth p;
-  output_string outchan "INTARGS : ";
-  Id.output_id_list outchan intargs;
-  Id.output_tab2 outchan depth p;
-  output_string outchan "FLOATARGS : ";
-  Id.output_id_list outchan floatargs;
+  output_string outchan "ARGS : ";
+  Id.output_id_list outchan args;
   Id.output_tab2 outchan depth p;
   output_string outchan "FUNBODY : ";
   output_t outchan (depth + 1) funbody;
