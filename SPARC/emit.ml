@@ -403,8 +403,7 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
         (inst_address := !inst_address + 4;Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" a regs.(0) p) (* reg.(0)からaにデータを移動 *)
       else if List.mem a allfregs && a <> fregs.(0) then (* 関数の浮動小数返り値レジスタがfreg.(0)でなければ *)
         (
-          inst_address := !inst_address + 4;Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_sw p;  (* 浮動小数の0を用意 *)
-          inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" a fregs.(0) reg_sw p;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %%f0\t# %d \n" a fregs.(0) p;
         );
   | NonTail(a), CallDir(Id.L(x), ys, zs) ->
       g'_args oc [] ys zs p;
@@ -423,8 +422,7 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
         (inst_address := !inst_address + 4;Printf.fprintf oc "\tadd\t%s %%x0 %s\t# %d \n" a regs.(0) p)
       else if List.mem a allfregs && a <> fregs.(0) then
         (
-          inst_address := !inst_address + 4;Printf.fprintf oc "\titof\t%s %%x0\t# %d \n" reg_sw p;  (* 浮動小数の0を用意 *)
-          inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %s\t# %d \n" a fregs.(0) reg_sw p;
+          inst_address := !inst_address + 4;Printf.fprintf oc "\tfadd\t%s %s %%f0\t# %d \n" a fregs.(0) p;
         );
 and g'_args oc x_reg_cl ys zs p = (* x_reg_cl *)
   let (i, yrs) =

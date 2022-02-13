@@ -68,5 +68,5 @@ let h { name = l; args = xs; fargs = ys; body = e; ret = t } = (* トップレ�
   { name = l; args = xs; fargs = ys; body = g  e; ret = t }
 
 let f (Prog(data, fundefs, e)) = (* プログラム全体の浮動小数テーブル最適化 *)
-  Format.eprintf "optimizing float table...";
+  Format.eprintf "optimizing float table...\n";
   Prog(data, List.map h fundefs, g e)
