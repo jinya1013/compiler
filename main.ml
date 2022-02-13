@@ -1,4 +1,5 @@
 let limit = ref 1000
+let gout = ref stdout
 
 let rec iter n e = (* ????????????????????????????????? (caml2html: main_iter) *)
   Format.eprintf "iteration %d@." n;
@@ -22,6 +23,7 @@ let lexbuf outchan utils_s_chan p =
                       p)))))))))
 
 let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana outchank outchant utils_s_chan p = 
+  gout := outchana;
   Id.counter := 0;
   Typing.extenv := M.empty;
   Emit.f outchan utils_s_chan
@@ -134,7 +136,7 @@ let file f output_flag = (* ?????��?��???????��?��????��????
 
 let () = 
   let files = ref [] in
-  let output_flag = ref false in
+  let output_flag = ref true in
   Arg.parse
     [
       ("-inline", Arg.Int(fun i -> Inline.threshold := i), "maximum size of functions inlined");

@@ -10,7 +10,7 @@ and exp =
   | Neg of Id.t
   | Add of Id.t * id_or_imm
   | Sub of Id.t * id_or_imm
-  | SLL of Id.t * Id.t
+  | SLL of Id.t * id_or_imm
   | Ld of Id.t * int
   | St of Id.t * Id.t * int
   | FMovD of Id.t
@@ -46,7 +46,6 @@ val fregs : Id.t array
 val allregs : Id.t list
 val allfregs : Id.t list
 val zero_reg : Id.t
-val reg2 : Id.t
 val reg_cl : Id.t
 val reg_sw : Id.t
 val reg_sw2 : Id.t

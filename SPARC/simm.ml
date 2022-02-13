@@ -3,20 +3,20 @@ open Asm
 let rec g env = function (* 命令列の13bit即値最適化 (caml2html: simm13_g) *)
   | Ans(exp, p) -> Ans(g' env exp, p)
   | Let((x, t), Set(i), e, p) when -4096 <= i && i < 4096 ->  (* レジスタxに整数iをセットする命令 *)
-      (* Format.eprintf "found simm13 %s = %d@." x i; *)
-      let e' = g (M.add x i env) e in (* xとiの対応関係を加えた環境で, envを評価 *)
+      Format.eprintf "found simm13 %s = %d@." x i;
+      let e' = g (M.add x i env) e in (* xとiの対応関係を加えた環境で, eを評価 *)
       if List.mem x (fv e') then Let((x, t), Set(i), e', p) else
-      ((* Format.eprintf "erased redundant Set to %s@." x; *)
+      (Format.eprintf "erased redundant Set to %s@." x;
        e') (* 最終的にe'中の全てのxが置き換えられてしまったら, xへの即値代入もいらない *)
-  (* | Let(xt, SLL(y, C(i)), e, p) when M.mem y env -> (* for array access *)
-      (* Format.eprintf "erased redundant SLL on %s@." x; *)
-      g env (Let(xt, Set((M.find y env) lsl i), e, p)) *)
+  | Let((x, t), SLL(y, C(i)), e, p) when M.mem y env -> (* for array access *)
+      Format.eprintf "erased redundant SLL on %s@." x;
+      g env (Let((x, t), Set((M.find y env) lsl i), e, p))
   | Let(xt, exp, e, p) -> Let(xt, g' env exp, g env e, p)
 and g' env = function (* 各命令の13bit即値最適化 (caml2html: simm13_gprime) *)
   | Add(x, V(y)) when M.mem y env -> Add(x, C(M.find y env))
   | Add(x, V(y)) when M.mem x env -> Add(y, C(M.find x env))
   | Sub(x, V(y)) when M.mem y env -> Sub(x, C(M.find y env))
-  (* | SLL(x, V(y)) when M.mem y env -> SLL(x, C(M.find y env)) *)
+  | SLL(x, V(y)) when M.mem y env -> SLL(x, C(M.find y env))
   (* | Ld(x, V(y)) when M.mem y env -> Ld(x, C(M.find y env)) *)
   (* | St(x, y, V(z)) when M.mem z env -> St(x, y, C(M.find z env)) *)
   (* | LdDF(x, V(y)) when M.mem y env -> LdDF(x, C(M.find y env)) *)

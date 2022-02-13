@@ -120,7 +120,12 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
     | V(v) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tsub\t%s %s %s\t# %d \n" x y (np_id_or_imm z') p
     | C(c) -> inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %s %s\t# %d \n" x y (np_id_or_imm z') p
   )
-  | NonTail(x), SLL(y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tsll\t%s %s %s\t# %d \n" x y z' p
+  | NonTail(x), SLL(y, z') -> (* inst_address := !inst_address + 4;Printf.fprintf oc "\tsll\t%s %s %s\t# %d \n" x y z' p *)
+  (
+    match z' with 
+    | V(v) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tsll\t%s %s %s\t# %d \n" x y (pp_id_or_imm z') p
+    | C(c) -> inst_address := !inst_address + 4;Printf.fprintf oc "\tslli\t%s %s %s\t# %d \n" x y (pp_id_or_imm z') p
+  )
   | NonTail(x), Ld(y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tlw\t%s %d(%s)\t# %d \n" x z' y p
   | NonTail(_), St(x, y, z') -> inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%s %d(%s)\t# %d \n" x z' y p
 
@@ -467,8 +472,7 @@ let hp_address = ref (0x200000 + 256)
 
 let allocate_st_and_hp oc = 
   set_int oc reg_sp !sp_address 0;
-  set_int oc reg_hp !hp_address 0;
-  set_int oc reg2 2 0
+  set_int oc reg_hp !hp_address 0
 
 let output_float_table oc data = 
   set_int oc reg_ftp !ftp_address 0;

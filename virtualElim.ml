@@ -12,7 +12,7 @@ let rec fv_h = function
   | Neg(x) -> S.singleton x
   | Add(x, y) -> S.union (S.singleton x) (fv_id_or_imm y)
   | Sub(x, y) -> S.union (S.singleton x) (fv_id_or_imm y)
-  | SLL(x, y) -> S.of_list [x; y]
+  | SLL(x, y) -> S.union (S.singleton x) (fv_id_or_imm y)
   | Ld(x, i) -> S.singleton x
   | St(x, y, i) -> S.of_list [x; y]
   | FMovD(x) -> S.singleton x

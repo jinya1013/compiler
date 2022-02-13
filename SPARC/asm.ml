@@ -11,7 +11,7 @@ and exp = (* 一つ一つの命令に対応する式 (caml2html: sparcasm_exp) *)
   | Neg of Id.t
   | Add of Id.t * id_or_imm
   | Sub of Id.t * id_or_imm
-  | SLL of Id.t * Id.t
+  | SLL of Id.t * id_or_imm
   | Ld of Id.t * int
   | St of Id.t * Id.t * int
   | FMovD of Id.t
@@ -66,7 +66,6 @@ let allregs = Array.to_list regs
 let allfregs = Array.to_list fregs
 let reg_cl = "%x4" (* closure register *)
 let zero_reg = "%x0" (* constant_register for integer 0 *)
-let reg2 = "%x28" (* constant_register for integer 2 *)
 let reg_sw = "%x5"(* temporary for swap *)
 let reg_sw2 = "%x31"(* temporary for swap *)
 let reg_fsw = "%f31" (* temporary for swap *)
@@ -88,7 +87,7 @@ let rec fv_exp = function
   | Nop | Set(_) | SetL(_) | Comment(_) | Restore(_) -> []
   | Mov(x) | Neg(x) | FMovD(x) | FNegD(x) | FSqrtD(x) | FloorD(x) | Save(x, _) -> [x]
   | Add(x, y') | Sub(x, y') -> x :: fv_id_or_imm y'
-  | SLL(x, y') -> x :: fv_id_or_imm (V(y'))
+  | SLL(x, y') -> x :: fv_id_or_imm y'
   | Ld(x, y') | LdDF(x, y') -> [x]
   | St(x, y, z') | StDF(x, y, z') -> x :: fv_id_or_imm (V(y))
   | FAddD(x, y) | FSubD(x, y) | FMulD(x, y) | FDivD(x, y) -> [x; y]
@@ -185,7 +184,7 @@ and output_exp outchan depth p = function
     output_string outchan "SLL ";
     Id.output_id outchan x;
     output_string outchan " ";
-    Id.output_id outchan c;
+    output_id_or_imm outchan c;
   )
   | Ld (x, offset) ->
   (
