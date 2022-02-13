@@ -483,6 +483,15 @@ let output_float_table oc data =
         )
     ); (* 下位12ビットを%x6に入れる *)
 
+    (
+      if offset = 48 then 
+      (
+        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x6 0\n" reg_ft48
+      )
+      else
+      ()
+    );
+
     inst_address := !inst_address + 4;Printf.fprintf oc "\tsw\t%%x6 %d(%s)\n" offset reg_ftp;
     )
     data;

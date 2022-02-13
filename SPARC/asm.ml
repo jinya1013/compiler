@@ -72,6 +72,7 @@ let reg_ftp = "%x29"
 let reg_sp = "%x2" (* stack pointer *)
 let reg_hp = "%x3" (* heap pointer (caml2html: sparcasm_reghp) *)
 let reg_ra = "%x1" (* return address *)
+let reg_ft48 = "%f30"
 let is_reg x = (x.[0] = '%')
 
 (* super-tenuki *)

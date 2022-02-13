@@ -27,7 +27,7 @@ let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana
   Id.counter := 0;
   Typing.extenv := M.empty;
   Emit.f outchan utils_s_chan
-    (let r = RegAlloc.f
+    (let r = RegAlloc.f (FloatTable.f 
       (let ve = VirtualElim.f
         (let s = Simm.f
           (let v = Virtual.f
@@ -44,7 +44,7 @@ let lexbuf_verbose outchan outchanr outchans outchanv outchanc outchani outchana
             in output_string outchanc "AFTER CLOSURE_TRANSFORM\n"; Closure.output_prog outchanc c; c)
           in output_string outchanv "AFTER VIRTUAL_TRANSFORM\n"; Asm.output_prog outchanv v; v)
         in output_string outchans "AFTER SIMM\n"; Asm.output_prog outchans s; s)
-      in output_string outchanr "AFTER VIRTUAL_ELIM\n"; Asm.output_prog outchanr ve; ve)
+      in output_string outchanr "AFTER VIRTUAL_ELIM\n"; Asm.output_prog outchanr ve; ve))
     in output_string outchanr "AFTER REGALLOC\n";Asm.output_prog outchanr r; r)
 
 let string s = 

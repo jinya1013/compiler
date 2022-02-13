@@ -59,11 +59,6 @@ and find_exp exp env :Id.t option =
     else
       find_exp exp envs) *)
 
-<<<<<<< HEAD
-(* トップレベルの関数 *)
-let rec f (t : KNormal.t) = g t empty_env
-  
-=======
 exception NotFoundErr of string
 
 let bound_vars = ref S.empty
@@ -253,4 +248,3 @@ and find_exp env env_list e =
 
 (* トップレベルの関数 *)
 let rec f (e : KNormal.t) = snd (rm M.empty e)
->>>>>>> 49d1a1e ([変更] シフト演算の即値最適化を実装)

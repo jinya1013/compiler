@@ -180,7 +180,7 @@ let h { Closure.name = (Id.L(x), t); Closure.args = yts; Closure.formal_fv = zts
 
 (* プログラム全体の仮想マシンコード生成 (caml2html: virtual_f) *)
 let f (Closure.Prog(fundefs, e)) =
-  print_string "starting to virtualize the code...\n";
+  Format.eprintf "starting to virtualize the code...\n";
   data := [];
   let fundefs = List.map h fundefs in (* fundefを変換 *)
   let e = g M.empty e in (* 式の本体を変換 *)
