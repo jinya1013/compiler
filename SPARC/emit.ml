@@ -248,11 +248,7 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
   (* Risc-Vでは浮動小数の比較演算が見つからなかったので, 暫定的 *)
   | Tail, IfFEq(x, y, e1, e2) ->
       let b = Id.genid ("feq") in
-      (* inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 0\t# %d \n" reg_sw p; reg_sw に 0 を代入 *)
-      (* inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 0\t# %d \n" reg_sw2 p; reg_sw2 に 0 を代入 *)
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p; (* x <= y なら 1 *)
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw2 y x p; (* y <= x なら 1 *)
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tand\t%s %s %s\t# %d \n" reg_sw reg_sw reg_sw2 p; (* x = y なら 1 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfeq\t%s %s %s\t# %d \n" reg_sw x y p; (* x <= y なら 1 *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p; (* x = y なら 飛ぶ *)
       let stackset_back = !stackset in
       g oc (Tail, e2);
@@ -261,7 +257,6 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       g oc (Tail, e1)
   | Tail, IfFLE(x, y, e1, e2) ->
       let b = Id.genid ("fle_else") in
-      (* inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 0\t# %d \n" reg_sw p; reg_sw に 0 を代入 *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p; (* x <= y なら 1 *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p; (* x <= y なら 飛ぶ *)
       let stackset_back = !stackset in
@@ -355,11 +350,7 @@ and g' p oc e =  (* 各命令のアセンブリ生成 (caml2html: emit_gprime) *)
       let b = Id.genid ("feq") in
       let b_cont = Id.genid ("feq_cont") in
       let dest = NonTail(z) in
-      (* inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 0\t# %d \n" reg_sw p; reg_sw に 0 を代入 *)
-      (* inst_address := !inst_address + 4;Printf.fprintf oc "\taddi\t%s %%x0 0\t# %d \n" reg_sw2 p; reg_sw2 に 0 を代入 *)
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw x y p; (* x <= y なら 1 *)
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tfle\t%s %s %s\t# %d \n" reg_sw2 y x p; (* y <= x なら 1 *)
-      inst_address := !inst_address + 4;Printf.fprintf oc "\tand\t%s %s %s\t# %d \n" reg_sw reg_sw reg_sw2 p; (* x = y なら 1 *)
+      inst_address := !inst_address + 4;Printf.fprintf oc "\tfeq\t%s %s %s\t# %d \n" reg_sw x y p; (* x = y なら 1 *)
       inst_address := !inst_address + 4;Printf.fprintf oc "\tbne\t%s %%x0 %s\t# %d \n" reg_sw b p; (* x = y なら飛ぶ *)
       let stackset_back = !stackset in
       g oc (dest, e2);

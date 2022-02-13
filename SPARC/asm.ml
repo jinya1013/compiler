@@ -52,7 +52,7 @@ let regs = (* Array.init 16 (fun i -> Printf.sprintf "%%r%d" i) *)
      "%x6"; "%x7"; "%x8"; "%x9"; "%x10"; "%x11"; "%x12"; "%x13";
      "%x14"; "%x15"; "%x16"; "%x17"; "%x18"; "%x19"; "%x20";
      "%x21"; "%x22"; "%x23"; "%x24"; "%x25"; "%x26"; "%x27";
-     "%x30"; "%x31"; "%x4"
+     "%x28"; "%x30"; "%x31"; "%x4"
   |]
 (* 関数呼び出し時は, クロージャのアドレスをx6に, 引数をx7, x8, に, 戻り番地をx1に入れる *)
 let fregs = [| 
@@ -67,7 +67,6 @@ let allfregs = Array.to_list fregs
 let reg_cl = "%x4" (* closure register *)
 let zero_reg = "%x0" (* constant_register for integer 0 *)
 let reg_sw = "%x5"(* temporary for swap *)
-let reg_sw2 = "%x31"(* temporary for swap *)
 let reg_fsw = "%f31" (* temporary for swap *)
 let reg_ftp = "%x29"
 let reg_sp = "%x2" (* stack pointer *)
