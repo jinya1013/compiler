@@ -60,7 +60,7 @@ let fregs = [|
      "%f8"; "%f9"; "%f10"; "%f11"; "%f12"; "%f13";
      "%f14"; "%f15"; "%f16"; "%f17"; "%f18"; "%f19"; "%f20";
      "%f21"; "%f22"; "%f23"; "%f24"; "%f25"; "%f26"; "%f27";
-     "%f28"; "%f29"; "%f31"
+     "%f29"; "%f31"
   |]
 let allregs = Array.to_list regs 
 let allfregs = Array.to_list fregs
@@ -73,6 +73,7 @@ let reg_sp = "%x2" (* stack pointer *)
 let reg_hp = "%x3" (* heap pointer (caml2html: sparcasm_reghp) *)
 let reg_ra = "%x1" (* return address *)
 let reg_ft48 = "%f30"
+let reg_ft16 = "%f28"
 let is_reg x = (x.[0] = '%')
 
 (* super-tenuki *)

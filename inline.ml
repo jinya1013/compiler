@@ -1,7 +1,19 @@
 open KNormal
 
 (* インライン展開する関数の最大サイズ (caml2html: inline_threshold) *)
-let threshold = ref 62 (* Mainで-inlineオプションによりセットされる *) (* 10 で 10000命令切る *)
+let threshold = ref 250 (* Mainで-inlineオプションによりセットされる *) (* 10 で 10000命令切る *)
+
+
+let heavy_funcs = ["init_vecset_constants"]
+
+let is_heavy_func = function
+  (* | x when String.length x >= String.length "solve_each_element_fast" && String.sub x 0 (String.length "solve_each_element_fast") = "solve_each_element_fast" -> true *)
+  | x when String.length x >= String.length "init_vecset_constants" && String.sub x 0 (String.length "init_vecset_constants") = "init_vecset_constants" -> true
+  (* | x when String.length x >= String.length "trace_ray" && String.sub x 0 (String.length "trace_ray") = "trace_ray" -> true *)
+  (* | x when String.length x >= String.length "check_all_inside" && String.sub x 0 (String.length "check_all_inside") = "check_all_inside" -> true
+  | x when String.length x >= String.length "vecset" && String.sub x 0 (String.length "vecset") = "vecset" -> true
+  | x when String.length x >= String.length "o_isinvert" && String.sub x 0 (String.length "o_isinvert") = "o_isinvert" -> true *)
+  | _ -> false
 
 let rec size = function
   | IfEq(_, _, e1, e2, p) | IfLE(_, _, e1, e2, p)
@@ -14,7 +26,8 @@ let rec g env = function (* インライン展開ルーチン本体 (caml2html: inline_g) *)
   | IfLE(x, y, e1, e2, p) -> IfLE(x, y, g env e1, g env e2, p)
   | Let(xt, e1, e2, p) -> Let(xt, g env e1, g env e2, p)
   | LetRec({ name = (x, t); args = yts; body = e1 }, e2, p) -> (* 関数定義の場合 (caml2html: inline_letrec) *)
-      let env = if size e1 > !threshold then env else M.add x (yts, e1) env in
+      let is_recur = S.mem x (fv e1) in
+      let env = if (size e1 <= !threshold  && not is_recur ) then M.add x (yts, e1) env else env in
       LetRec({ name = (x, t); args = yts; body = g env e1}, g env e2, p)
   | App(x, ys, p) when M.mem x env -> (* 関数適用の場合 (caml2html: inline_app) *)
       let (zs, e) = M.find x env in
