@@ -44,7 +44,7 @@ and sbst x1 x2 = function (* 命令列中の変数x1をx2で置き換える. た
   | Let((x, t), exp, e, p) -> Let((x, t), sbst' x1 x2 exp, sbst x1 x2 e, p)
 
 
-let allcregs = [(* ((52, "%f0"); (48, reg_ft48); (16, reg_ft16)) *)]
+let allcregs = [ (8, "%f0"); (64, reg_ft48); (28, reg_ft16); (76, reg_ft44) ]
 
 
 let rec g' = function

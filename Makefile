@@ -27,7 +27,7 @@ alpha.mli alpha.ml rmExp.mli rmExp.ml beta.mli beta.ml assoc.mli assoc.ml \
 inline.mli inline.ml constFold.mli constFold.ml elim.mli elim.ml \
 closure.mli closure.ml asm.mli asm.ml virtual.mli virtual.ml \
 virtualElim.mli virtualElim.ml floatTable.mli floatTable.ml \
-simm.mli simm.ml regAlloc.mli regAlloc.ml rmAddZero.mli rmAddZero.ml afterRegAllocElim.mli afterRegAllocElim.ml emit.mli emit.ml \
+simm.mli simm.ml regAlloc.mli regAlloc.ml rmAddZero.mli rmAddZero.ml  emit.mli emit.ml \
 main.mli main.ml 
 
 # ���ƥ��ȥץ������?�������顢���������?
@@ -65,7 +65,7 @@ min-caml.html: main.mli main.ml id.ml m.ml s.ml \
 		inline.mli inline.ml constFold.mli constFold.ml elim.mli elim.ml \
 		closure.mli closure.ml asm.mli asm.ml virtual.mli virtual.ml \
 		virtualElim.mli virtualElim.ml floatTable.mli floatTable.ml \
-		simm.mli simm.ml regAlloc.mli regAlloc.ml rmAddZero.mli rmAddZero.ml afterRegAllocElim.mli afterRegAllocElim.ml emit.mli emit.ml
+		simm.mli simm.ml regAlloc.mli regAlloc.ml rmAddZero.mli rmAddZero.ml  emit.mli emit.ml
 	./to_sparc
 	caml2html -o min-caml.html $^
 	sed 's/.*<\/title>/MinCaml Source Code<\/title>/g' < min-caml.html > min-caml.tmp.html

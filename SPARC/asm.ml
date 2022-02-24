@@ -74,6 +74,7 @@ let reg_hp = "%x3" (* heap pointer (caml2html: sparcasm_reghp) *)
 let reg_ra = "%x1" (* return address *)
 let reg_ft48 = "%f30"
 let reg_ft16 = "%f28"
+let reg_ft44 = "%f27"
 let is_reg x = (x.[0] = '%')
 
 (* super-tenuki *)

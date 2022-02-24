@@ -483,10 +483,12 @@ let output_float_table oc data =
 
     (
       match offset with
-      | offset when offset = 48 ->
+      | offset when offset = 64 ->
         inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x6 0\n" reg_ft48
-      | offset when offset = 16 -> 
+      | offset when offset = 28 -> 
         inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x6 0\n" reg_ft16
+      | offset when offset = 44 -> 
+        inst_address := !inst_address + 4; Printf.fprintf oc "\taddi\t%s %%x6 0\n" reg_ft44
       | _ ->
        ()
     );
